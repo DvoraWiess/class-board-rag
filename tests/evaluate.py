@@ -15,46 +15,60 @@ from src.query import ask, attach_token_counter
 
 EVAL_SET_PATH = PROJECT_ROOT / "tests" / "eval_set.json"
 RESULTS_DIR = PROJECT_ROOT / "tests" / "results"
-JUDGE_ATTEMPTS = 4
-RATE_LIMIT_WAIT = 60
 
+# Why: שיפוט מרוכז — קריאה אחת לשופט בכל ריצה. במסלול החינמי יש לשופט 20 בקשות ליום (יומן הבעיות #11)
 JUDGE_PROMPT = """אתה בודק תשובות של בוט שעונה על שאלות לפי הודעות של קבוצת תלמידות.
+לפניך {count} פריטים. בכל פריט: שאלה, התשובה הנכונה, והתשובה של הבוט.
 
-שאלה: {question}
-התשובה הנכונה: {expected}
-התשובה של הבוט: {actual}
-
-האם התשובה של הבוט נכונה? כללים:
-- נכונה = המידע העיקרי מהתשובה הנכונה מופיע, ואין מידע שגוי (תאריך, שעה, מקום) שסותר אותה. פרטים נוספים נכונים — מותר.
+כללים — מתי תשובת הבוט נכונה:
+- המידע העיקרי מהתשובה הנכונה מופיע, ואין מידע שגוי (תאריך, שעה, מקום) שסותר אותה. פרטים נוספים נכונים — מותר.
 - אם התשובה הנכונה היא "לא מצאתי מידע" — הבוט חייב לומר שאין לו מידע, ולא לענות מהידע הכללי שלו.
 - אם התשובה הנכונה מציגה סתירה — הבוט חייב להציג את כל הגרסאות.
 - אם התשובה הנכונה אומרת שמידע חסר — הבוט חייב לציין שהוא חסר, ולא להמציא.
 - ניסוח שונה, סדר אחר, או תאריך עם שנה — לא משנים.
+- שפוט כל פריט בנפרד, רק לפי הפריט עצמו.
 
-ענה ב-JSON בלבד, בלי טקסט נוסף: {{"correct": true או false, "reason": "משפט אחד בעברית"}}"""
+{items}
+
+ענה ב-JSON בלבד, בלי טקסט נוסף: מערך עם {count} איברים, אחד לכל פריט, עם מספר הפריט (id):
+[{{"id": 1, "correct": true, "reason": "משפט אחד בעברית"}}, ...]"""
+
+ITEM_TEMPLATE = """<item id="{id}">
+שאלה: {question}
+התשובה הנכונה: {expected}
+התשובה של הבוט: {actual}
+</item>"""
 
 
-def judge(judge_model, item, answer_text):
-    """Judge: מודל אחר מזה שכתב את התשובה בודק אותה מול התשובה הנכונה. מחזיר (נכון?, נימוק)."""
-    prompt = JUDGE_PROMPT.format(question=item["question"], expected=item["expected"], actual=answer_text)
-    for attempt in range(1, JUDGE_ATTEMPTS + 1):
-        try:
-            raw = judge_model.complete(prompt).text
-            break
-        except Exception as error:
-            # Why: 429 = מגבלת בקשות לדקה במסלול החינמי — מחכים דקה ומנסים שוב (יומן הבעיות #11)
-            if "429" in str(error) and attempt < JUDGE_ATTEMPTS:
-                print(f"Judge: מגבלת בקשות לדקה — מחכים {RATE_LIMIT_WAIT} שניות (ניסיון {attempt})")
-                time.sleep(RATE_LIMIT_WAIT)
-                continue
-            # Why: שגיאה אחרת (למשל 503) לא מפילה את כל הריצה — השאלה מסומנת "?"
-            return None, f"Judge error: {type(error).__name__} {str(error)[:60]}"
-    match = re.search(r"\{.*\}", raw, re.DOTALL)
+def parse_verdicts(raw, ids):
+    """Parse: מחזיר {id: (נכון?, נימוק)}. פריט חסר או לא תקין — (None, נימוק), כלומר "?"."""
+    verdicts = {}
+    match = re.search(r"\[.*\]", raw, re.DOTALL)
     try:
-        verdict = json.loads(match.group(0))
-        return bool(verdict["correct"]), verdict.get("reason", "")
-    except (AttributeError, ValueError, KeyError):
-        return None, f"Judge parse error: {raw[:100]}"
+        for entry in json.loads(match.group(0)):
+            if isinstance(entry, dict) and entry.get("id") in ids and entry["id"] not in verdicts:
+                verdicts[entry["id"]] = (bool(entry["correct"]), entry.get("reason", ""))
+    except (AttributeError, ValueError, KeyError, TypeError):
+        pass
+    missing = [i for i in ids if i not in verdicts]
+    if missing:
+        print(f"Warning: השופט החזיר {len(verdicts)} שיפוטים ל-{len(ids)} שאלות. חסרות: {missing} — מסומנות '?'")
+    return {i: verdicts.get(i, (None, "Missing in judge output")) for i in ids}
+
+
+def judge_all(judge_model, results):
+    """Judge: מודל אחר מזה שכתב את התשובות שופט את כל התשובות בקריאה אחת."""
+    to_judge = [r for r in results if not r["answer"].startswith("ERROR")]
+    ids = [r["id"] for r in to_judge]
+    items = "\n\n".join(ITEM_TEMPLATE.format(id=r["id"], question=r["question"], expected=r["expected"],
+                                             actual=r["answer"]) for r in to_judge)
+    try:
+        raw = judge_model.complete(JUDGE_PROMPT.format(count=len(ids), items=items)).text
+    except Exception as error:
+        # Why: שגיאה (למשל 429 / 503) לא מפילה את הריצה — כל השאלות מסומנות "?"
+        print(f"Judge error: {type(error).__name__} {str(error)[:80]}")
+        return {i: (None, f"Judge error: {type(error).__name__}") for i in ids}
+    return parse_verdicts(raw, ids)
 
 
 def retrieval_metrics(nodes, relevant_ids):
@@ -135,19 +149,24 @@ def main():
                             "llm_called": False, "tokens": {"llm_prompt": 0, "llm_completion": 0, "embedding": 0},
                             "sent_ids": [], "cited": []})
             continue
-        correct, reason = judge(judge_model, item, answer.text)
         recall, mrr = retrieval_metrics(nodes, item["relevant_ids"])
         results.append({
             "id": item["id"], "type": item["type"], "question": item["question"], "expected": item["expected"],
-            "answer": answer.text, "correct": correct, "reason": reason,
+            "answer": answer.text, "correct": None, "reason": "",
             "recall": None if recall is None else round(recall, 3), "mrr": None if mrr is None else round(mrr, 3),
             "llm_called": answer.llm_called, "tokens": answer.tokens,
             "sent_ids": [n.node.metadata["message_id"] for n in nodes],
             "cited": [s["message_id"] for s in answer.sources],
         })
-        mark = {True: "OK", False: "WRONG", None: "?"}[correct]
-        print(f"Q{item['id']:<3}{item['type']:<14}{mark:<6} recall={recall} mrr={mrr} | {reason}")
+        print(f"Q{item['id']:<3}{item['type']:<14} recall={recall} mrr={mrr}")
         time.sleep(args.pause)
+
+    verdicts = judge_all(judge_model, results)
+    for r in results:
+        if r["id"] in verdicts:
+            r["correct"], r["reason"] = verdicts[r["id"]]
+        mark = {True: "OK", False: "WRONG", None: "?"}[r["correct"]]
+        print(f"Q{r['id']:<3}{mark:<6} {r['reason']}")
 
     summary = summarize(results)
     print(f"Summary: {summary}")
