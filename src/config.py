@@ -14,9 +14,17 @@ TIMEZONE = "Asia/Jerusalem"
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 EMAILS_DIR = PROJECT_ROOT / "data" / "emails"
 SAMPLE_EMAILS_DIR = PROJECT_ROOT / "data" / "sample_emails"
+CHROMA_DIR = PROJECT_ROOT / "chroma_db"
 
 # Why: טמפרטורה 0 — אנחנו רוצים תשובות עובדתיות ועקביות, לא יצירתיות
 LLM_TEMPERATURE = 0.0
+
+# Chunking: הודעות קצרות (10-100 טוקנים) — כמעט תמיד הודעה אחת = Chunk אחד
+CHUNK_SIZE = 1024
+CHUNK_OVERLAP = 50
+
+# Replies: כמה תווים מההודעה המקורית מוסיפים לטקסט של תגובה
+PARENT_EXCERPT_CHARS = 150
 
 
 def require_env(name):

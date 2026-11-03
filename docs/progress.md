@@ -30,4 +30,14 @@
   CLI: `python -m src.clean --summary` (lengths only), `python -m src.clean "<id>"` (before/after).
 - Result on samples: exactly the 5 designed messages changed (#02, #10, #11, #13, #23). Edge cases pass.
 
-## Next: Stage 3 — indexing
+## Stage 3 — indexing (done, waiting for approval/commit, 2026-11-03)
+- `src/indexer.py`: Document per message (id = message_id), text = subject + clean body
+  (+ reply: `בתגובה ל<name>: "<150 chars of parent>"` — decision B).
+  Metadata: message_id, subject, from (name only), date (readable, with weekday), date_ts, in_reply_to.
+  Embed sees text only; LLM sees text + from + date.
+- Chroma 1.5.9 persistent in `chroma_db/`, collection "messages", cosine (`configuration`), embedding_function=None.
+- `index_new_messages()`: incremental insert in batches of 10 messages; `index_info.json`
+  (provider, model, dimension 3072, chunk settings) — mismatch stops with a Hebrew message and `--rebuild`.
+- Result: 25 messages → 25 Nodes; second run adds 0; model change detected.
+
+## Next: Stage 4 — retrieval inspection
