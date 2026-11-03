@@ -17,6 +17,7 @@ from src.config import (
     EMAILS_DIR,
     LLM_PROVIDER,
     PARENT_EXCERPT_CHARS,
+    TEXT_VERSION,
     TIMEZONE,
     setup_models,
 )
@@ -97,6 +98,7 @@ def current_settings():
         "embed_model": Settings.embed_model.model_name,
         "chunk_size": CHUNK_SIZE,
         "chunk_overlap": CHUNK_OVERLAP,
+        "text_version": TEXT_VERSION,
     }
 
 

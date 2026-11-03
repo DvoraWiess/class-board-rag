@@ -1,0 +1,102 @@
+{
+  "asked_on": "2026-11-03T10:00:00+02:00",
+  "note": "Approved 2026-11-03. Built on data/sample_emails. asked_on fixes 'today' so relative questions are reproducible.",
+  "questions": [
+    {
+      "id": 1, "type": "update",
+      "question": "מתי המבחן באנגלית?",
+      "expected": "יום שני 9.11, בשעה השנייה. נדחה מיום חמישי 5.11.",
+      "relevant_ids": ["<sample-12@sample.test>"]
+    },
+    {
+      "id": 2, "type": "thread",
+      "question": "מה החומר למבחן באנגלית?",
+      "expected": "יחידות 3 ו-4 בספר, וגם הסיפור שקראו בכיתה.",
+      "relevant_ids": ["<sample-03@sample.test>", "<sample-05@sample.test>"]
+    },
+    {
+      "id": 3, "type": "cancel",
+      "question": "יש מבחן בהיסטוריה ב-10.11?",
+      "expected": "לא, המבחן בוטל. במקומו מגישים עבודה על המהפכה הצרפתית עד יום שלישי 17.11.",
+      "relevant_ids": ["<sample-19@sample.test>"]
+    },
+    {
+      "id": 4, "type": "cancel",
+      "question": "עד מתי צריך להגיש את העבודה בהיסטוריה?",
+      "expected": "עד יום שלישי 17.11.",
+      "relevant_ids": ["<sample-19@sample.test>"]
+    },
+    {
+      "id": 5, "type": "contradiction",
+      "question": "מתי המבחן במדעים?",
+      "expected": "סתירה: לפי אביגיל ביום ראשון 15.11, לפי מיכל ביום שני 16.11. המידע מתלמידות — כדאי לוודא.",
+      "relevant_ids": ["<sample-21@sample.test>", "<sample-22@sample.test>"]
+    },
+    {
+      "id": 6, "type": "partial",
+      "question": "כמה עולה הטיול השנתי?",
+      "expected": "עוד לא ידוע — על התשלום עוד לא אמרו. (הטיול ביום חמישי 12.11.)",
+      "relevant_ids": ["<sample-16@sample.test>"]
+    },
+    {
+      "id": 7, "type": "thread",
+      "question": "מה צריך להביא לטיול?",
+      "expected": "כובע, 2 ליטר מים וארוחת צהריים.",
+      "relevant_ids": ["<sample-16@sample.test>"]
+    },
+    {
+      "id": 8, "type": "relative_date",
+      "question": "מה יש מחר?",
+      "expected": "יום רביעי 4.11: יום קצר, מסיימים ב-12:30 בגלל אסיפת ההורים (האסיפה ב-18:00).",
+      "relevant_ids": ["<sample-24@sample.test>"]
+    },
+    {
+      "id": 9, "type": "relative_date",
+      "question": "באיזו שעה מתחילים היום?",
+      "expected": "ב-9:00 — אין שיעור ראשון (יום שלישי 3.11).",
+      "relevant_ids": ["<sample-20@sample.test>"]
+    },
+    {
+      "id": 10, "type": "simple",
+      "question": "מתי אסיפת ההורים?",
+      "expected": "יום רביעי 4.11 בשעה 18:00 באולם בית הספר.",
+      "relevant_ids": ["<sample-11@sample.test>"]
+    },
+    {
+      "id": 11, "type": "simple",
+      "question": "מה שיעורי הבית במתמטיקה?",
+      "expected": "דף עבודה 7, להגיש ביום רביעי 4.11.",
+      "relevant_ids": ["<sample-15@sample.test>"]
+    },
+    {
+      "id": 12, "type": "simple",
+      "question": "מה צריך לעשות בשיעורי הבית במדעים?",
+      "expected": "לסכם את פרק 2 בספר (התא), להגיש ביום ראשון 8.11.",
+      "relevant_ids": ["<sample-23@sample.test>"]
+    },
+    {
+      "id": 13, "type": "simple",
+      "question": "מה השתנה במערכת ביום רביעי 28.10?",
+      "expected": "לא היה ספורט; במקומו שיעור חזרה במתמטיקה.",
+      "relevant_ids": ["<sample-09@sample.test>"]
+    },
+    {
+      "id": 14, "type": "no_info",
+      "question": "מתי המבחן בספרות?",
+      "expected": "לא מצאתי מידע על כך בהודעות.",
+      "relevant_ids": []
+    },
+    {
+      "id": 15, "type": "no_info",
+      "question": "מי שלחה צילום של דף עבודה 7?",
+      "expected": "לא מצאתי מידע על כך בהודעות. (שירה ביקשה צילום, אבל אף אחת לא ענתה.)",
+      "relevant_ids": []
+    },
+    {
+      "id": 16, "type": "off_topic",
+      "question": "מה המתכון לעוגת שוקולד?",
+      "expected": "לא מצאתי מידע על כך בהודעות. (בלי קריאה ל-LLM)",
+      "relevant_ids": []
+    }
+  ]
+}
