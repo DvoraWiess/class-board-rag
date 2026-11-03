@@ -26,8 +26,12 @@ CHUNK_OVERLAP = 50
 # Replies: כמה תווים מההודעה המקורית מוסיפים לטקסט של תגובה
 PARENT_EXCERPT_CHARS = 150
 
-# Retrieval: כמה הודעות לשלוף לכל שאלה
-TOP_K = 5
+# Retrieval: שליפה רחבה — כדי שעדכון לא "ייפול" מחוץ לרשימה (יומן הבעיות #6)
+TOP_K = 10
+
+# Cutoff: מתחת לציון הזה ההודעה לא נשלחת ל-LLM. 0.72 = בין שאלה לא קשורה (0.67) לשאלות בתחום (0.77+)
+# Note: הציון הוא של LlamaIndex: exp(-distance). ניסוי עם 0.65 / 0.72 / 0.8 — בשלב 7
+SIMILARITY_CUTOFF = 0.72
 
 
 def require_env(name):

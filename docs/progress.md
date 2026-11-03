@@ -48,4 +48,17 @@
   unrelated question 0.673; update ranked below original; relative "מחר"; informal messages rank high.
 - Suggested cutoff for stage 5: 0.72 (score units).
 
-## Next: Stage 5 — answer generation
+## Stage 5 — answer generation (done, waiting for approval/commit, 2026-11-03)
+- `src/query.py`: `as_query_engine` with TOP_K=10, `SimilarityPostprocessor(0.72)`, custom `ChronologicalNumbering`
+  (FixedRecencyPostprocessor is newest-first, keeps 1, needs pandas), Hebrew `QA_PROMPT` with today's date,
+  `<messages>`/`<message number>` tags, 9 rules (update, contradiction, relative dates, student questions,
+  partial, no-info, injection, sources line).
+- `ask()` = `engine.retrieve()` → empty → NO_INFO without LLM; else `engine.synthesize()`.
+- Sources: LLM ends with "מקורות: N, M"; `split_sources` strips it; fallback = all sent nodes (no line / bad number).
+  `Answer.latest_date`, `Answer.has_earlier`.
+- Tokens: `TokenCountingHandler` — LLM counts are real (Gemini usage_metadata), embedding counts are estimates.
+- `--show-prompt` prints the real prompt. Results: update, cancel, contradiction, partial, "מחר", no-info,
+  off-topic (no LLM call), prompt injection — all correct. Problems #5-#7, #9 updated.
+- For stage 6: hide "מקורות:" line while streaming (user request), show formatted sources instead.
+
+## Next: Stage 6 — Streamlit UI
