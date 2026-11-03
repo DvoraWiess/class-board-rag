@@ -32,9 +32,11 @@ WEEKDAYS = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "ש�
 
 # Why: מזהים ומספרים — אין בהם משמעות לחיפוש ולא ל-LLM. subject כבר נמצא בטקסט עצמו.
 # Why: date ו-from — רק ל-LLM: הוא צריך לדעת מתי ומי, אבל בחיפוש הם היו מקרבים הודעות לפי תאריך/שם ולא לפי נושא
+# Why: בתגובה — reply_context (שורה מצוטטת מההודעה המקורית) רק לחיפוש; reply_to (מי ומתי, בלי תוכן) רק ל-LLM.
+# Note: אחרת ה-LLM קורא את הציטוט כאילו המשיבה כתבה אותו (יומן הבעיות #12)
 NEVER_KEYS = ["message_id", "date_ts", "in_reply_to", "subject"]
-EXCLUDED_EMBED_KEYS = NEVER_KEYS + ["date", "from"]
-EXCLUDED_LLM_KEYS = NEVER_KEYS
+EXCLUDED_EMBED_KEYS = NEVER_KEYS + ["date", "from", "reply_to"]
+EXCLUDED_LLM_KEYS = NEVER_KEYS + ["reply_context"]
 
 
 def readable_date(iso_date):
@@ -52,31 +54,39 @@ def sender_name(record):
     return name or address or record["from"]
 
 
-def message_text(record, parent):
-    """Text: נושא + גוף נקי. בתגובה — גם שורה קצרה מההודעה המקורית, מסומנת בבירור."""
-    text = f"{record['subject']}\n{clean_body(record['body'], record['body_type'])}"
-    if parent:
-        excerpt = " ".join(clean_body(parent["body"], parent["body_type"]).split())
-        if len(excerpt) > PARENT_EXCERPT_CHARS:
-            excerpt = excerpt[:PARENT_EXCERPT_CHARS] + "..."
-        text += f'\n\nבתגובה ל{sender_name(parent)}: "{excerpt}"'
-    return text
+def message_text(record):
+    """Text: נושא + גוף נקי."""
+    return f"{record['subject']}\n{clean_body(record['body'], record['body_type'])}"
+
+
+def reply_metadata(parent):
+    """Reply: לחיפוש — שורה קצרה מההודעה המקורית; ל-LLM — רק מי כתבה אותה ומתי."""
+    excerpt = " ".join(clean_body(parent["body"], parent["body_type"]).split())
+    if len(excerpt) > PARENT_EXCERPT_CHARS:
+        excerpt = excerpt[:PARENT_EXCERPT_CHARS] + "..."
+    return {
+        "reply_context": f'בתגובה ל{sender_name(parent)}: "{excerpt}"',
+        "reply_to": f"בתגובה להודעה של {sender_name(parent)} מ{readable_date(parent['date'])}",
+    }
 
 
 def build_document(record, parent):
     """Document: הודעה אחת = Document אחד, עם metadata ובחירה מפורשת מה נכנס ל-Embedding ול-LLM."""
+    metadata = {
+        "message_id": record["message_id"],
+        "subject": record["subject"],
+        "from": sender_name(record),
+        "date": readable_date(record["date"]),
+        "date_ts": int(datetime.fromisoformat(record["date"]).timestamp()),
+        # Note: Chroma לא מקבל None ב-metadata — לכן מחרוזת ריקה
+        "in_reply_to": record.get("in_reply_to") or "",
+    }
+    if parent:
+        metadata |= reply_metadata(parent)
     return Document(
         id_=record["message_id"],
-        text=message_text(record, parent),
-        metadata={
-            "message_id": record["message_id"],
-            "subject": record["subject"],
-            "from": sender_name(record),
-            "date": readable_date(record["date"]),
-            "date_ts": int(datetime.fromisoformat(record["date"]).timestamp()),
-            # Note: Chroma לא מקבל None ב-metadata — לכן מחרוזת ריקה
-            "in_reply_to": record.get("in_reply_to") or "",
-        },
+        text=message_text(record),
+        metadata=metadata,
         excluded_embed_metadata_keys=EXCLUDED_EMBED_KEYS,
         excluded_llm_metadata_keys=EXCLUDED_LLM_KEYS,
     )

@@ -28,7 +28,8 @@ PARENT_EXCERPT_CHARS = 150
 
 # Version: אופן בניית הטקסט שנכנס לאינדקס (ניקוי, שורת תגובה, metadata).
 # Rule: כל שינוי ב-clean.py או ב-build_document באינדקסר — להעלות ב-1. המערכת תבקש בנייה מחדש.
-TEXT_VERSION = 1
+# Note: 2 = הציטוט מההודעה המקורית רק לחיפוש, ול-LLM רק "בתגובה להודעה של X מ-..." (יומן הבעיות #12)
+TEXT_VERSION = 2
 
 # Retrieval: שליפה רחבה — כדי שעדכון לא "ייפול" מחוץ לרשימה (יומן הבעיות #6)
 TOP_K = 10
@@ -79,3 +80,27 @@ def setup_models():
         )
     else:
         raise SystemExit(f"Error: ערך לא מוכר LLM_PROVIDER={LLM_PROVIDER} (gemini או openai)")
+
+
+# Judge: ברירת מחדל — מודל חזק יותר מזה שכותב את התשובות, ושונה ממנו
+DEFAULT_JUDGE_MODELS = {"gemini": "gemini-3.5-flash", "openai": "gpt-5"}
+
+
+def judge_llm(answer_model):
+    """Judge: LLM נפרד ששופט תשובות בהערכה. עוצר אם הוא זהה למודל שכותב את התשובות."""
+    # Note: callback_manager ריק — כדי שטוקני השופט לא ייספרו כטוקנים של המערכת עצמה
+    from llama_index.core.callbacks import CallbackManager
+
+    model = os.getenv(f"{LLM_PROVIDER.upper()}_JUDGE_MODEL", DEFAULT_JUDGE_MODELS[LLM_PROVIDER]).strip()
+    if model == answer_model:
+        raise SystemExit(f"Error: מודל השופט ({model}) זהה למודל שכותב את התשובות — מודל לא ישפוט את עצמו")
+    if LLM_PROVIDER == "gemini":
+        from llama_index.llms.google_genai import GoogleGenAI
+
+        # Note: max_retries גבוה — עומס (503) נפוץ במסלול החינמי, וההערכה ארוכה
+        return GoogleGenAI(model=model, api_key=require_env("GOOGLE_API_KEY"), temperature=0.0,
+                           max_retries=8, callback_manager=CallbackManager([]))
+    from llama_index.llms.openai import OpenAI
+
+    return OpenAI(model=model, api_key=require_env("OPENAI_API_KEY"), temperature=0.0,
+                  callback_manager=CallbackManager([]))

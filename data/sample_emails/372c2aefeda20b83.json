@@ -1,0 +1,9 @@
+{
+  "message_id": "<sample-26@sample.test>",
+  "date": "2026-11-02T19:30:00+02:00",
+  "subject": "Re: טיול שנתי",
+  "from": "נועה לוי <noa.levi@example.com>",
+  "in_reply_to": "<sample-16@sample.test>",
+  "body": "אמרו לי שהיציאה לטיול ב-8:00 מהשער הראשי, לא מהחנייה.",
+  "body_type": "text"
+}

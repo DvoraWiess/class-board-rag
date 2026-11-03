@@ -1,0 +1,313 @@
+{
+  "settings": {
+    "split": "tune",
+    "top_k": 10,
+    "cutoff": 0.72,
+    "llm": "gemini-3.5-flash-lite",
+    "judge": "gemini-3.5-flash",
+    "asked_on": "2026-11-03T21:00:00+02:00",
+    "tag": "baseline"
+  },
+  "summary": {
+    "questions": 10,
+    "not_judged": 4,
+    "accuracy": 1.0,
+    "recall_at_k": 1.0,
+    "mrr": 0.781,
+    "llm_calls": 9,
+    "avg_llm_tokens_real": 1248.4,
+    "avg_embedding_tokens_estimate": 20.6
+  },
+  "results": [
+    {
+      "id": 1,
+      "type": "change",
+      "question": "מתי המבחן באנגלית?",
+      "expected": "יום שני 9.11, בשעה השנייה. נדחה מיום חמישי 5.11.",
+      "answer": "המבחן באנגלית יתקיים ביום שני 9.11.2026, בשעה השנייה. \n(התאריך המקורי היה 5.11, אך הוא נדחה בהודעה מיום 29.10.2026).\nחומר המבחן כולל את יחידות 3 ו-4 בספר, וכן את הסיפור שקראנו בכיתה.",
+      "correct": true,
+      "reason": "התשובה כוללת את כל המידע המרכזי מהתשובה הנכונה ללא מידע שגוי הסותר אותה.",
+      "recall": 1.0,
+      "mrr": 0.25,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1525,
+        "llm_completion": 113,
+        "embedding": 18
+      },
+      "sent_ids": [
+        "<sample-03@sample.test>",
+        "<sample-04@sample.test>",
+        "<sample-05@sample.test>",
+        "<sample-06@sample.test>",
+        "<sample-12@sample.test>",
+        "<sample-13@sample.test>",
+        "<sample-14@sample.test>",
+        "<sample-21@sample.test>",
+        "<sample-22@sample.test>",
+        "<sample-25@sample.test>"
+      ],
+      "cited": [
+        "<sample-03@sample.test>",
+        "<sample-05@sample.test>",
+        "<sample-12@sample.test>"
+      ]
+    },
+    {
+      "id": 2,
+      "type": "thread",
+      "question": "מה החומר למבחן באנגלית?",
+      "expected": "יחידות 3 ו-4 בספר, וגם הסיפור שקראו בכיתה.",
+      "answer": "החומר למבחן באנגלית כולל את יחידות 3 ו-4 בספר, וכן את הסיפור שקראנו בכיתה.",
+      "correct": true,
+      "reason": "תשובת הבוט כוללת את כל המידע העיקרי מהתשובה הנכונה ללא מידע שגוי או סותר.",
+      "recall": 1.0,
+      "mrr": 0.5,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1517,
+        "llm_completion": 48,
+        "embedding": 22
+      },
+      "sent_ids": [
+        "<sample-03@sample.test>",
+        "<sample-04@sample.test>",
+        "<sample-05@sample.test>",
+        "<sample-06@sample.test>",
+        "<sample-10@sample.test>",
+        "<sample-12@sample.test>",
+        "<sample-13@sample.test>",
+        "<sample-14@sample.test>",
+        "<sample-21@sample.test>",
+        "<sample-25@sample.test>"
+      ],
+      "cited": [
+        "<sample-03@sample.test>",
+        "<sample-05@sample.test>",
+        "<sample-12@sample.test>"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "change",
+      "question": "עד מתי צריך להגיש את העבודה בהיסטוריה?",
+      "expected": "עד יום שלישי 17.11.",
+      "answer": "את העבודה על המהפכה הצרפתית שניתנה במקום המבחן צריך להגיש עד יום שלישי 17.11.2026. (עדכון זה נכתב בהודעה מיום שני 2.11.2026).",
+      "correct": true,
+      "reason": "התשובה מכילה את המידע המרכזי והנכון לגבי מועד ההגשה, והוספת השנה ופרטים נוספים מותרת לפי הכללים.",
+      "recall": 1.0,
+      "mrr": 1.0,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1098,
+        "llm_completion": 72,
+        "embedding": 35
+      },
+      "sent_ids": [
+        "<sample-02@sample.test>",
+        "<sample-04@sample.test>",
+        "<sample-10@sample.test>",
+        "<sample-15@sample.test>",
+        "<sample-17@sample.test>",
+        "<sample-19@sample.test>"
+      ],
+      "cited": [
+        "<sample-19@sample.test>"
+      ]
+    },
+    {
+      "id": 5,
+      "type": "contradiction",
+      "question": "מתי המבחן במדעים?",
+      "expected": "סתירה: לפי אביגיל ביום ראשון 15.11, לפי מיכל ביום שני 16.11. המידע מתלמידות — כדאי לוודא.",
+      "answer": "לפי הודעות התלמידות ישנן שתי גרסאות לגבי מועד המבחן במדעים:\n* אביגיל גולד כתבה ביום שני 2.11.2026 שהמבחן ביום ראשון 15.11.2026.\n* מיכל רוזן כתבה ביום שלישי 3.11.2026 שהמבחן ביום שני 16.11.2026.\n\nמכיוון שהמידע הגיע מתלמידות ויש סתירה בין הגרסאות ללא עדכון רשמי ביניהן, כדאי לוודא את המועד המדויק.",
+      "correct": true,
+      "reason": "הבוט מציג את שתי הגרסאות הסותרות וממליץ לוודא את המועד, בהתאם למידע בתשובה הנכונה.",
+      "recall": 1.0,
+      "mrr": 1.0,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1610,
+        "llm_completion": 171,
+        "embedding": 16
+      },
+      "sent_ids": [
+        "<sample-01@sample.test>",
+        "<sample-03@sample.test>",
+        "<sample-04@sample.test>",
+        "<sample-10@sample.test>",
+        "<sample-12@sample.test>",
+        "<sample-13@sample.test>",
+        "<sample-14@sample.test>",
+        "<sample-21@sample.test>",
+        "<sample-22@sample.test>",
+        "<sample-23@sample.test>"
+      ],
+      "cited": [
+        "<sample-21@sample.test>",
+        "<sample-22@sample.test>"
+      ]
+    },
+    {
+      "id": 6,
+      "type": "partial",
+      "question": "כמה עולה הטיול השנתי?",
+      "expected": "עוד לא ידוע — על התשלום עוד לא אמרו. (הטיול ביום חמישי 12.11.)",
+      "answer": "על פי ההודעות, עדיין לא אמרו דבר על תשלום עבור הטיול השנתי (המידע חסר).",
+      "correct": true,
+      "reason": "תשובת הבוט כוללת את המידע המרכזי שלפיו עוד לא נאמר דבר על התשלום ואינה מכילה מידע שגוי.",
+      "recall": 1.0,
+      "mrr": 0.5,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 980,
+        "llm_completion": 38,
+        "embedding": 21
+      },
+      "sent_ids": [
+        "<sample-07@sample.test>",
+        "<sample-16@sample.test>",
+        "<sample-26@sample.test>"
+      ],
+      "cited": [
+        "<sample-16@sample.test>"
+      ]
+    },
+    {
+      "id": 8,
+      "type": "relative_date",
+      "question": "מה יש מחר?",
+      "expected": "יום רביעי 4.11: יום קצר, מסיימים ב-12:30 בגלל אסיפת ההורים (האסיפה ב-18:00).",
+      "answer": "לפי הודעתה של תמר כהן מיום שלישי 3.11.2026, מחר (יום רביעי 4.11.2026) יהיה יום קצר בגלל אסיפת הורים, ומסיימים ב-12:30. \nמבחינת מערכת השעות הרגילה, יום רביעי כולל ספורט, מדעים והיסטוריה (לפי הודעת נועה לוי מיום 15.10.2026). לגבי שינויים נוספים למחר, אין מידע נוסף בהודעות.",
+      "correct": true,
+      "reason": "התשובה מכילה את המידע העיקרי לגבי היום הקצר ומועד הסיום ללא פרטים שגויים הסותרים אותו.",
+      "recall": 1.0,
+      "mrr": 1.0,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1283,
+        "llm_completion": 153,
+        "embedding": 9
+      },
+      "sent_ids": [
+        "<sample-01@sample.test>",
+        "<sample-03@sample.test>",
+        "<sample-07@sample.test>",
+        "<sample-09@sample.test>",
+        "<sample-10@sample.test>",
+        "<sample-20@sample.test>",
+        "<sample-24@sample.test>",
+        "<sample-25@sample.test>"
+      ],
+      "cited": [
+        "<sample-01@sample.test>",
+        "<sample-24@sample.test>"
+      ]
+    },
+    {
+      "id": 10,
+      "type": "simple",
+      "question": "מתי אסיפת ההורים?",
+      "expected": "יום רביעי 4.11 בשעה 18:00 באולם בית הספר.",
+      "answer": "אסיפת ההורים תתקיים ביום רביעי 4.11.2026 בשעה 18:00 באולם בית הספר.",
+      "correct": null,
+      "reason": "Judge error: ClientError 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': '",
+      "recall": 1.0,
+      "mrr": 1.0,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1130,
+        "llm_completion": 43,
+        "embedding": 16
+      },
+      "sent_ids": [
+        "<sample-01@sample.test>",
+        "<sample-02@sample.test>",
+        "<sample-07@sample.test>",
+        "<sample-11@sample.test>",
+        "<sample-20@sample.test>",
+        "<sample-24@sample.test>"
+      ],
+      "cited": [
+        "<sample-11@sample.test>"
+      ]
+    },
+    {
+      "id": 12,
+      "type": "simple",
+      "question": "מה צריך לעשות בשיעורי הבית במדעים?",
+      "expected": "לסכם את פרק 2 בספר (התא), להגיש ביום ראשון 8.11.",
+      "answer": "לפי הודעתה של יעל אברהם מיום שלישי 3.11.2026, שיעורי הבית במדעים הם לסכם את פרק 2 בספר (התא), ולהגיש אותם ביום ראשון 8.11.2026.",
+      "correct": null,
+      "reason": "Judge error: ClientError 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': '",
+      "recall": 1.0,
+      "mrr": 1.0,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1053,
+        "llm_completion": 76,
+        "embedding": 30
+      },
+      "sent_ids": [
+        "<sample-02@sample.test>",
+        "<sample-08@sample.test>",
+        "<sample-15@sample.test>",
+        "<sample-17@sample.test>",
+        "<sample-21@sample.test>",
+        "<sample-23@sample.test>"
+      ],
+      "cited": [
+        "<sample-23@sample.test>"
+      ]
+    },
+    {
+      "id": 14,
+      "type": "no_info",
+      "question": "מתי המבחן בספרות?",
+      "expected": "לא מצאתי מידע על כך בהודעות.",
+      "answer": "לא מצאתי מידע על כך בהודעות.",
+      "correct": null,
+      "reason": "Judge error: ClientError 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': '",
+      "recall": null,
+      "mrr": null,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1556,
+        "llm_completion": 18,
+        "embedding": 18
+      },
+      "sent_ids": [
+        "<sample-03@sample.test>",
+        "<sample-04@sample.test>",
+        "<sample-05@sample.test>",
+        "<sample-06@sample.test>",
+        "<sample-10@sample.test>",
+        "<sample-12@sample.test>",
+        "<sample-13@sample.test>",
+        "<sample-14@sample.test>",
+        "<sample-21@sample.test>",
+        "<sample-22@sample.test>"
+      ],
+      "cited": []
+    },
+    {
+      "id": 16,
+      "type": "off_topic",
+      "question": "מה המתכון לעוגת שוקולד?",
+      "expected": "לא מצאתי מידע על כך בהודעות.",
+      "answer": "לא מצאתי מידע על כך בהודעות.",
+      "correct": null,
+      "reason": "Judge error: ClientError 429 RESOURCE_EXHAUSTED. {'error': {'code': 429, 'message': '",
+      "recall": null,
+      "mrr": null,
+      "llm_called": false,
+      "tokens": {
+        "llm_prompt": 0,
+        "llm_completion": 0,
+        "embedding": 21
+      },
+      "sent_ids": [],
+      "cited": []
+    }
+  ]
+}

@@ -1,102 +1,168 @@
 {
-  "asked_on": "2026-11-03T10:00:00+02:00",
-  "note": "Approved 2026-11-03. Built on data/sample_emails. asked_on fixes 'today' so relative questions are reproducible.",
+  "asked_on": "2026-11-03T21:00:00+02:00",
+  "note": "Approved 2026-11-03/04. Built on data/sample_emails. asked_on fixes 'today' and limits retrieval to messages written until then. split: tune = experiments only, test = one final run for the submission score.",
   "questions": [
     {
-      "id": 1, "type": "update",
+      "id": 1, "type": "change", "split": "tune",
       "question": "מתי המבחן באנגלית?",
       "expected": "יום שני 9.11, בשעה השנייה. נדחה מיום חמישי 5.11.",
       "relevant_ids": ["<sample-12@sample.test>"]
     },
     {
-      "id": 2, "type": "thread",
+      "id": 2, "type": "thread", "split": "tune",
       "question": "מה החומר למבחן באנגלית?",
       "expected": "יחידות 3 ו-4 בספר, וגם הסיפור שקראו בכיתה.",
       "relevant_ids": ["<sample-03@sample.test>", "<sample-05@sample.test>"]
     },
     {
-      "id": 3, "type": "cancel",
+      "id": 3, "type": "change", "split": "test",
       "question": "יש מבחן בהיסטוריה ב-10.11?",
       "expected": "לא, המבחן בוטל. במקומו מגישים עבודה על המהפכה הצרפתית עד יום שלישי 17.11.",
       "relevant_ids": ["<sample-19@sample.test>"]
     },
     {
-      "id": 4, "type": "cancel",
+      "id": 4, "type": "change", "split": "tune",
       "question": "עד מתי צריך להגיש את העבודה בהיסטוריה?",
       "expected": "עד יום שלישי 17.11.",
       "relevant_ids": ["<sample-19@sample.test>"]
     },
     {
-      "id": 5, "type": "contradiction",
+      "id": 5, "type": "contradiction", "split": "tune",
       "question": "מתי המבחן במדעים?",
       "expected": "סתירה: לפי אביגיל ביום ראשון 15.11, לפי מיכל ביום שני 16.11. המידע מתלמידות — כדאי לוודא.",
       "relevant_ids": ["<sample-21@sample.test>", "<sample-22@sample.test>"]
     },
     {
-      "id": 6, "type": "partial",
+      "id": 6, "type": "partial", "split": "tune",
       "question": "כמה עולה הטיול השנתי?",
       "expected": "עוד לא ידוע — על התשלום עוד לא אמרו. (הטיול ביום חמישי 12.11.)",
       "relevant_ids": ["<sample-16@sample.test>"]
     },
     {
-      "id": 7, "type": "thread",
+      "id": 7, "type": "thread", "split": "test",
       "question": "מה צריך להביא לטיול?",
       "expected": "כובע, 2 ליטר מים וארוחת צהריים.",
       "relevant_ids": ["<sample-16@sample.test>"]
     },
     {
-      "id": 8, "type": "relative_date",
+      "id": 8, "type": "relative_date", "split": "tune",
       "question": "מה יש מחר?",
       "expected": "יום רביעי 4.11: יום קצר, מסיימים ב-12:30 בגלל אסיפת ההורים (האסיפה ב-18:00).",
       "relevant_ids": ["<sample-24@sample.test>"]
     },
     {
-      "id": 9, "type": "relative_date",
+      "id": 9, "type": "relative_date", "split": "test",
       "question": "באיזו שעה מתחילים היום?",
       "expected": "ב-9:00 — אין שיעור ראשון (יום שלישי 3.11).",
       "relevant_ids": ["<sample-20@sample.test>"]
     },
     {
-      "id": 10, "type": "simple",
+      "id": 10, "type": "simple", "split": "tune",
       "question": "מתי אסיפת ההורים?",
       "expected": "יום רביעי 4.11 בשעה 18:00 באולם בית הספר.",
       "relevant_ids": ["<sample-11@sample.test>"]
     },
     {
-      "id": 11, "type": "simple",
+      "id": 11, "type": "simple", "split": "test",
       "question": "מה שיעורי הבית במתמטיקה?",
       "expected": "דף עבודה 7, להגיש ביום רביעי 4.11.",
       "relevant_ids": ["<sample-15@sample.test>"]
     },
     {
-      "id": 12, "type": "simple",
+      "id": 12, "type": "simple", "split": "tune",
       "question": "מה צריך לעשות בשיעורי הבית במדעים?",
       "expected": "לסכם את פרק 2 בספר (התא), להגיש ביום ראשון 8.11.",
       "relevant_ids": ["<sample-23@sample.test>"]
     },
     {
-      "id": 13, "type": "simple",
+      "id": 13, "type": "simple", "split": "test",
       "question": "מה השתנה במערכת ביום רביעי 28.10?",
       "expected": "לא היה ספורט; במקומו שיעור חזרה במתמטיקה.",
       "relevant_ids": ["<sample-09@sample.test>"]
     },
     {
-      "id": 14, "type": "no_info",
+      "id": 14, "type": "no_info", "split": "tune",
       "question": "מתי המבחן בספרות?",
       "expected": "לא מצאתי מידע על כך בהודעות.",
       "relevant_ids": []
     },
     {
-      "id": 15, "type": "no_info",
+      "id": 15, "type": "no_info", "split": "test",
       "question": "מי שלחה צילום של דף עבודה 7?",
       "expected": "לא מצאתי מידע על כך בהודעות. (שירה ביקשה צילום, אבל אף אחת לא ענתה.)",
       "relevant_ids": []
     },
     {
-      "id": 16, "type": "off_topic",
+      "id": 16, "type": "off_topic", "split": "tune",
       "question": "מה המתכון לעוגת שוקולד?",
-      "expected": "לא מצאתי מידע על כך בהודעות. (בלי קריאה ל-LLM)",
+      "expected": "לא מצאתי מידע על כך בהודעות.",
       "relevant_ids": []
+    },
+    {
+      "id": 17, "type": "partial", "split": "test",
+      "question": "מה ההנחיות לעבודה בהיסטוריה?",
+      "expected": "ההנחיות עוד לא נשלחו (\"יגיעו בהמשך\"). ידוע רק: עבודה על המהפכה הצרפתית, להגיש עד יום שלישי 17.11.",
+      "relevant_ids": ["<sample-19@sample.test>"]
+    },
+    {
+      "id": 18, "type": "off_topic", "split": "test",
+      "question": "מה עיר הבירה של צרפת?",
+      "expected": "לא מצאתי מידע על כך בהודעות. (אסור לענות \"פריז\" מהידע הכללי.)",
+      "relevant_ids": []
+    },
+    {
+      "id": 19, "type": "contradiction", "split": "test",
+      "question": "מאיפה ומתי יוצאים לטיול?",
+      "expected": "סתירה: לפי מיכל ב-7:30 מחניית בית הספר, לפי נועה ב-8:00 מהשער הראשי. המידע מתלמידות — כדאי לוודא.",
+      "relevant_ids": ["<sample-16@sample.test>", "<sample-26@sample.test>"]
+    },
+    {
+      "id": 20, "type": "change", "split": "tune", "style": "natural",
+      "question": "האם מישהי יודעת מתי המבחן באנגלית?",
+      "expected": "יום שני 9.11, בשעה השנייה. נדחה מיום חמישי 5.11.",
+      "relevant_ids": ["<sample-12@sample.test>"]
+    },
+    {
+      "id": 21, "type": "change", "split": "test", "style": "natural",
+      "question": "מישהי שמעה אם המבחן בהיסטוריה עדיין קיים?",
+      "expected": "לא, המבחן (10.11) בוטל. במקומו מגישים עבודה על המהפכה הצרפתית עד יום שלישי 17.11.",
+      "relevant_ids": ["<sample-19@sample.test>"]
+    },
+    {
+      "id": 22, "type": "contradiction", "split": "tune", "style": "natural",
+      "question": "המבחן במדעים ב-15 או ב-16?",
+      "expected": "סתירה: לפי אביגיל ביום ראשון 15.11, לפי מיכל ביום שני 16.11. המידע מתלמידות — כדאי לוודא.",
+      "relevant_ids": ["<sample-21@sample.test>", "<sample-22@sample.test>"]
+    },
+    {
+      "id": 23, "type": "contradiction", "split": "tune", "style": "natural",
+      "question": "יוצאים לטיול ב-7:30 או ב-8:00?",
+      "expected": "סתירה: לפי מיכל ב-7:30 מחניית בית הספר, לפי נועה ב-8:00 מהשער הראשי. המידע מתלמידות — כדאי לוודא.",
+      "relevant_ids": ["<sample-16@sample.test>", "<sample-26@sample.test>"]
+    },
+    {
+      "id": 24, "type": "relative_date", "split": "test", "style": "natural",
+      "question": "מישהי יודעת אם מחר יום קצר?",
+      "expected": "כן, מחר (יום רביעי 4.11) מסיימים ב-12:30 בגלל אסיפת ההורים.",
+      "relevant_ids": ["<sample-24@sample.test>"]
+    },
+    {
+      "id": 25, "type": "change", "split": "test", "style": "natural",
+      "question": "המבחן באנגלית ביום חמישי נכון?",
+      "expected": "לא. המבחן נדחה מיום חמישי 5.11 ליום שני 9.11, בשעה השנייה.",
+      "relevant_ids": ["<sample-12@sample.test>"]
+    },
+    {
+      "id": 26, "type": "no_info", "split": "tune", "style": "natural",
+      "question": "מישהי יודעת אם יש מבחן בספרות?",
+      "expected": "לא מצאתי מידע על כך בהודעות.",
+      "relevant_ids": []
+    },
+    {
+      "id": 27, "type": "partial", "split": "test", "style": "natural",
+      "question": "מישהי יודעת כמה צריך לשלם על הטיול?",
+      "expected": "עוד לא ידוע — על התשלום עוד לא אמרו.",
+      "relevant_ids": ["<sample-16@sample.test>"]
     }
   ]
 }

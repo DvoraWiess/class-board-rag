@@ -3,13 +3,15 @@ import re
 import sys
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
+from typing import Any, Optional
 from zoneinfo import ZoneInfo
 
 from llama_index.core import PromptTemplate, QueryBundle, Settings
 from llama_index.core.callbacks import CallbackManager, TokenCountingHandler
 from llama_index.core.postprocessor import SimilarityPostprocessor
 from llama_index.core.postprocessor.types import BaseNodePostprocessor
+from llama_index.core.schema import NodeWithScore
+from llama_index.core.vector_stores import FilterOperator, MetadataFilter, MetadataFilters
 
 from src.config import SIMILARITY_CUTOFF, TIMEZONE, TOP_K, setup_models
 from src.indexer import open_index, readable_date
@@ -67,6 +69,37 @@ class ChronologicalNumbering(BaseNodePostprocessor):
         return nodes
 
 
+class ParentExpansion(BaseNodePostprocessor):
+    """Parent: כשנשלפה תגובה — מוסיף את ההודעה שעליה ענו ("אב"), גם אם היא לא עברה את הסף.
+
+    Why: Parent-child retrieval (החוברת, פרק 4). בשאלה "יוצאים ב-7:30 או ב-8:00?" נשלפה רק התגובה,
+    וההודעה המקורית עם 7:30 נשארה מתחת לסף (יומן הבעיות #12).
+    Rule: רק אב ישיר אחד לכל תגובה (לא סבא), ובלי כפילויות אם האב כבר נשלף.
+    """
+
+    vector_store: Any = None
+
+    @classmethod
+    def class_name(cls) -> str:
+        return "ParentExpansion"
+
+    def _postprocess_nodes(self, nodes, query_bundle=None):
+        present = {n.node.metadata["message_id"] for n in nodes}
+        parents = []
+        for child in nodes:
+            parent_id = child.node.metadata.get("in_reply_to")
+            if not parent_id or parent_id in present:
+                continue
+            found = self.vector_store.get_nodes(None, filters=MetadataFilters(filters=[
+                MetadataFilter(key="message_id", value=parent_id),
+            ]))
+            if found:
+                # Note: האב מקבל את הציון של התגובה שהביאה אותו (אין לו ציון משלו מעל הסף)
+                parents.append(NodeWithScore(node=found[0], score=child.score))
+                present.add(parent_id)
+        return nodes + parents
+
+
 @dataclass
 class Answer:
     text: str
@@ -97,14 +130,29 @@ def attach_token_counter():
     return counter
 
 
-def build_engine(streaming=False):
-    """Engine: Query Engine עם שליפה רחבה, סף, מיון כרונולוגי ופרומפט בעברית."""
+def build_engine(streaming=False, top_k=TOP_K, cutoff=SIMILARITY_CUTOFF, now=None):
+    """Engine: Query Engine עם שליפה רחבה, סף, מיון כרונולוגי ופרומפט בעברית.
+
+    Note: now = "היום". ברירת מחדל — עכשיו. בהערכה — תאריך קבוע, ואז נשלפות רק הודעות
+    שנכתבו עד אז (MetadataFilters על date_ts), כדי שהודעות חדשות לא ישנו את התוצאות.
+    """
     index, _ = open_index()
-    today = readable_date(datetime.now(ZoneInfo(TIMEZONE)).isoformat())
+    filters = None
+    if now is None:
+        now = datetime.now(ZoneInfo(TIMEZONE))
+    else:
+        filters = MetadataFilters(filters=[
+            MetadataFilter(key="date_ts", value=int(now.timestamp()), operator=FilterOperator.LTE),
+        ])
     return index.as_query_engine(
-        similarity_top_k=TOP_K,
-        node_postprocessors=[SimilarityPostprocessor(similarity_cutoff=SIMILARITY_CUTOFF), ChronologicalNumbering()],
-        text_qa_template=QA_PROMPT.partial_format(today=today),
+        similarity_top_k=top_k,
+        filters=filters,
+        node_postprocessors=[
+            SimilarityPostprocessor(similarity_cutoff=cutoff),
+            ParentExpansion(vector_store=index.vector_store),
+            ChronologicalNumbering(),
+        ],
+        text_qa_template=QA_PROMPT.partial_format(today=readable_date(now.isoformat())),
         streaming=streaming,
     )
 
@@ -157,19 +205,22 @@ def token_summary(counter):
     }
 
 
-def ask(question, counter):
-    """Ask: שאלה → תשובה עם מקורות. בלי הודעות מעל הסף — "לא מצאתי" בלי לקרוא ל-LLM."""
+def ask(question, counter, **engine_options):
+    """Ask: שאלה → תשובה עם מקורות. בלי הודעות מעל הסף — "לא מצאתי" בלי לקרוא ל-LLM.
+
+    Note: engine_options (top_k, cutoff, now) — להערכה ולניסויים. מחזיר גם את ה-nodes שנשלחו ל-LLM.
+    """
     counter.reset_counts()
-    engine = build_engine()
+    engine = build_engine(**engine_options)
     bundle = QueryBundle(question)
     nodes = engine.retrieve(bundle)
     if not nodes:
-        return Answer(text=NO_INFO_ANSWER, tokens=token_summary(counter))
+        return Answer(text=NO_INFO_ANSWER, tokens=token_summary(counter)), nodes
 
     response = engine.synthesize(bundle, nodes)
     text, sources, fallback = finalize(str(response), nodes)
     prompt = counter.llm_token_counts[-1].prompt if counter.llm_token_counts else None
-    return Answer(text, sources, True, fallback, token_summary(counter), prompt)
+    return Answer(text, sources, True, fallback, token_summary(counter), prompt), nodes
 
 
 class SourcesHidingStream:
@@ -257,7 +308,8 @@ def main():
     setup_models()
     counter = attach_token_counter()
     for question in args.questions:
-        print_answer(question, ask(question, counter), args.show_prompt)
+        answer, _ = ask(question, counter)
+        print_answer(question, answer, args.show_prompt)
 
 
 if __name__ == "__main__":
