@@ -1,0 +1,15 @@
+# Secrets: מפתחות וסיסמאות — לעולם לא עולים ל-Git
+.env
+
+# Personal data: המיילים והאינדקס
+data/
+chroma_db/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Logs
+*.log
+logs/
