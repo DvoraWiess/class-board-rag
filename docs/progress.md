@@ -40,4 +40,12 @@
   (provider, model, dimension 3072, chunk settings) — mismatch stops with a Hebrew message and `--rebuild`.
 - Result: 25 messages → 25 Nodes; second run adds 0; model change detected.
 
-## Next: Stage 4 — retrieval inspection
+## Stage 4 — retrieval inspection (done, waiting for approval/commit, 2026-11-03)
+- `src/inspect_retrieval.py`: top_k with LlamaIndex score, Chroma distance, cosine; no LLM. `TOP_K = 5` in config.
+- Score: LlamaIndex Chroma returns `exp(-distance)`; Chroma cosine distance = 1 - cosine. Range here ~0.65-0.85.
+  Embeddings use task types RETRIEVAL_QUERY / RETRIEVAL_DOCUMENT (built into the library).
+- Findings → problems_log #5-#8: no threshold separates in-domain "no info" (0.790) from answers (0.772);
+  unrelated question 0.673; update ranked below original; relative "מחר"; informal messages rank high.
+- Suggested cutoff for stage 5: 0.72 (score units).
+
+## Next: Stage 5 — answer generation

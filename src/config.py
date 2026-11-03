@@ -26,6 +26,9 @@ CHUNK_OVERLAP = 50
 # Replies: כמה תווים מההודעה המקורית מוסיפים לטקסט של תגובה
 PARENT_EXCERPT_CHARS = 150
 
+# Retrieval: כמה הודעות לשלוף לכל שאלה
+TOP_K = 5
+
 
 def require_env(name):
     """Get: מחזיר משתנה סביבה, ועוצר עם הודעה ברורה אם הוא חסר."""
