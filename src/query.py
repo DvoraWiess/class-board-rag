@@ -172,6 +172,59 @@ def ask(question, counter):
     return Answer(text, sources, True, fallback, token_summary(counter), prompt)
 
 
+class SourcesHidingStream:
+    """Stream: מעביר את התשובה חלק אחר חלק, ועוצר כשמתחילה שורת "מקורות:".
+
+    Why: בממשק מציגים מקורות מעוצבים במקום השורה הגולמית. כל הטקסט (כולל השורה) נשמר ב-full_text.
+    Note: מחזיקים את התווים האחרונים בהמתנה — אולי הם תחילת "מקורות:" שעוד לא הגיעה במלואה.
+    """
+
+    MARKER = "מקורות:"
+    HOLD_CHARS = len(MARKER) + 4
+
+    def __init__(self, chunks):
+        self.chunks = chunks
+        self.full_text = ""
+
+    def visible_end(self, final=False):
+        """End: עד איזה תו מותר להציג. אחרי "מקורות:" — כלום; לפניה — בלי כוכביות של הדגשה ("**מקורות:**")."""
+        cut = self.full_text.find(self.MARKER)
+        if cut != -1:
+            return len(self.full_text[:cut].rstrip().rstrip("*").rstrip())
+        return len(self.full_text) if final else len(self.full_text) - self.HOLD_CHARS
+
+    def __iter__(self):
+        sent = 0
+        for chunk in self.chunks:
+            self.full_text += chunk
+            end = self.visible_end()
+            if end > sent:
+                yield self.full_text[sent:end]
+                sent = end
+        end = self.visible_end(final=True)
+        if end > sent:
+            yield self.full_text[sent:end]
+
+
+def ask_stream(question, counter):
+    """Stream: כמו ask, אבל מחזיר (זרם, nodes). זרם None = אין הודעות מעל הסף, בלי קריאה ל-LLM."""
+    counter.reset_counts()
+    engine = build_engine(streaming=True)
+    bundle = QueryBundle(question)
+    nodes = engine.retrieve(bundle)
+    if not nodes:
+        return None, nodes
+    response = engine.synthesize(bundle, nodes)
+    return SourcesHidingStream(response.response_gen), nodes
+
+
+def finish_stream(stream, nodes, counter):
+    """Finish: אחרי שהזרם הסתיים — בונה Answer מלא עם מקורות וטוקנים."""
+    text, sources, fallback = finalize(stream.full_text, nodes)
+    prompt = counter.llm_token_counts[-1].prompt if counter.llm_token_counts else None
+    return Answer(text, sources, True, fallback, token_summary(counter), prompt)
+
+
 def print_answer(question, answer, show_prompt):
     if show_prompt and answer.prompt:
         print("===== Prompt sent to LLM =====")

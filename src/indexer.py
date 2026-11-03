@@ -44,6 +44,9 @@ def readable_date(iso_date):
 
 def sender_name(record):
     """Sender: רק השם, בלי הכתובת. אם אין שם — הכתובת."""
+    # Why: הודעה מהמסך היא שם בלבד ("נועה לוי"). parseaddr מפרש אותה ככתובת וחותך ברווח ("נועה")
+    if "<" not in record["from"] and "@" not in record["from"]:
+        return record["from"].strip()
     name, address = parseaddr(record["from"])
     return name or address or record["from"]
 

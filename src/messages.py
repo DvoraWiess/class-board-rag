@@ -2,6 +2,8 @@ import email
 import hashlib
 import json
 import shutil
+import uuid
+from datetime import datetime
 from email import policy
 from zoneinfo import ZoneInfo
 
@@ -60,6 +62,19 @@ def parse_message(raw_bytes):
         "in_reply_to": str(msg["in-reply-to"] or "").strip() or None,
         "body": body,
         "body_type": body_type,
+    }
+
+
+def new_post(name, subject, body, in_reply_to=None):
+    """Post: הודעה חדשה ממסך "הוספת הודעה" — באותו פורמט. תאריך ומזהה נקבעים אוטומטית."""
+    return {
+        "message_id": f"<post-{uuid.uuid4().hex}@board.local>",
+        "date": datetime.now(ZoneInfo(TIMEZONE)).isoformat(timespec="seconds"),
+        "subject": subject.strip(),
+        "from": name.strip(),
+        "in_reply_to": in_reply_to,
+        "body": body.strip(),
+        "body_type": "text",
     }
 
 

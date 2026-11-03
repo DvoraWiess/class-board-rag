@@ -61,4 +61,15 @@
   off-topic (no LLM call), prompt injection — all correct. Problems #5-#7, #9 updated.
 - For stage 6: hide "מקורות:" line while streaming (user request), show formatted sources instead.
 
-## Next: Stage 6 — Streamlit UI
+## Stage 6 — Streamlit UI (done, waiting for approval/commit, 2026-11-03)
+- `app.py` (Streamlit 1.66.1): RTL CSS, `startup()` cached (models, token counter, seed, incremental index).
+  Tab "שאלות": history in `st.session_state` (display only), "שיחה חדשה", `st.chat_input`, `st.write_stream`
+  with `SourcesHidingStream` (hides "מקורות:" line), formatted sources + tokens (LLM real, embedding estimate).
+  No-info without LLM shown immediately. Tab "הוספת הודעה": reply selectbox outside the form (fills "Re:"),
+  form name/subject/body, `new_post` + `save_email` + `index_now`; import expander (.mbox/.eml).
+- `src/query.py`: `SourcesHidingStream`, `ask_stream`, `finish_stream`. `src/messages.py`: `new_post`.
+- Tested with Streamlit AppTest: answers, no-LLM path, add reply → indexed → used in next answer.
+  Bugs found and fixed: name cut by parseaddr (problems_log #10), "Re: Re:".
+- Open: optional "כלים" expander (rebuild index / run eval set) — ask the user.
+
+## Next: Stage 7 — evaluation
