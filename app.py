@@ -4,14 +4,15 @@ import src  # noqa: F401  (Must: ראשון — מפעיל את truststore)
 import streamlit as st
 from chromadb.api.client import SharedSystemClient
 
-from src import import_export
 from src.config import PROJECT_ROOT, setup_models
-from src.indexer import index_built_at, index_new_messages, load_records, readable_date, sender_name
+from src.import_export import import_file
+from src.indexer import index_built_at, index_new_messages, load_records, open_index, readable_date, sender_name
 from src.messages import new_post, save_email, seed_samples
 from src.query import NO_INFO_ANSWER, Answer, ask_stream, attach_token_counter, finish_stream
 
 UPLOADS_DIR = PROJECT_ROOT / "data" / "raw" / "uploads"
 REPLY_CHOICES = 30
+ANSWER_ERROR = "אירעה שגיאה בזמן החיפוש או כתיבת התשובה (ייתכן עומס זמני ב-Gemini). נסי שוב בעוד רגע."
 
 # Note: כיוון RTL לכל האפליקציה; קוד נשאר משמאל לימין
 RTL_CSS = """
@@ -25,12 +26,16 @@ code, pre { direction: ltr; text-align: left; }
 
 @st.cache_resource(show_spinner="Loading: טוען מודלים ומעדכן את האינדקס...")
 def startup():
-    """Startup: פעם אחת לכל הפעלה — מודלים, מונה טוקנים, הודעות דוגמה ואינדוקס מצטבר."""
+    """Startup: פעם אחת לכל הפעלה — מודלים, מונה טוקנים, הודעות דוגמה, אינדוקס מצטבר, ופתיחת האינדקס.
+
+    Why: האינדקס נפתח כאן פעם אחת, ולא בכל שאלה (יומן הבעיות #16).
+    """
     setup_models()
     counter = attach_token_counter()
     seed_samples()
     index_new_messages()
-    return {"counter": counter, "built_at": index_built_at()}
+    index, _ = open_index()
+    return {"counter": counter, "built_at": index_built_at(), "index": index}
 
 
 def check_index_fresh(state):
@@ -81,8 +86,9 @@ def render_answer(answer, question):
         st.caption(f"לא נמצאה הודעה מתאימה — לא נשלחה קריאה ל-LLM שעונה · Embedding {t['embedding']} (הערכה)")
 
 
-def questions_tab(counter):
+def questions_tab(state):
     """Tab: שאלות. השאלה והתשובה האחרונות נשלחות רק לשלב הניסוח מחדש — לא ל-LLM שעונה."""
+    counter = state["counter"]
     if st.button("שיחה חדשה"):
         st.session_state.history = []
 
@@ -100,16 +106,23 @@ def questions_tab(counter):
     with st.chat_message("user"):
         st.markdown(question)
     with st.chat_message("assistant"):
-        stream, nodes, search_query = ask_stream(question, counter, history)
-        if stream is None:
-            st.markdown(NO_INFO_ANSWER)
-            answer = Answer(NO_INFO_ANSWER, search_query=search_query,
-                            tokens={"llm_prompt": counter.prompt_llm_token_count,
-                                    "llm_completion": counter.completion_llm_token_count,
-                                    "embedding": counter.total_embedding_token_count})
-        else:
-            st.write_stream(stream)
-            answer = finish_stream(stream, nodes, counter, search_query)
+        try:
+            stream, nodes, search_query = ask_stream(question, counter, history, state["index"])
+            if stream is None:
+                st.markdown(NO_INFO_ANSWER)
+                answer = Answer(NO_INFO_ANSWER, search_query=search_query,
+                                tokens={"llm_prompt": counter.prompt_llm_token_count,
+                                        "llm_completion": counter.completion_llm_token_count,
+                                        "embedding": counter.total_embedding_token_count})
+            else:
+                st.write_stream(stream)
+                answer = finish_stream(stream, nodes, counter, search_query)
+        except Exception as error:
+            # Why: בלי זה שגיאה (למשל 503 מ-Gemini) הציגה Traceback של פייתון (יומן הבעיות #15).
+            # Note: השאלה לא נכנסת להיסטוריה — כדי שלא תשמש כ"שאלה קודמת" לשאלת המשך
+            print(f"Error: {type(error).__name__}: {error}")
+            st.error(ANSWER_ERROR)
+            return
         render_answer(answer, question)
     st.session_state.history.append({"question": question, "answer": answer})
 
@@ -165,10 +178,13 @@ def import_section():
             UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
             path = UPLOADS_DIR / uploaded.name
             path.write_bytes(uploaded.getvalue())
-            with st.spinner("מייבא..."):
-                records, total, _, failed = import_export.load_records(path, None)
-                saved = sum(save_email(r) for r in records)
-                index_now()
+            try:
+                with st.spinner("מייבא..."):
+                    total, saved, failed = import_file(path)
+                    index_now()
+            except (SystemExit, Exception) as error:
+                st.error(f"הייבוא נכשל: {error}")
+                return
             st.success(f"נקראו {total} מיילים, נשמרו {saved} חדשים, {failed} לא נקראו.")
 
 
@@ -181,16 +197,19 @@ def main():
     try:
         state = startup()
     except SystemExit as error:
-        # Note: למשל — מודל ה-Embeddings השתנה ויש לבנות את האינדקס מחדש
+        # Note: למשל — מודל ה-Embeddings השתנה ויש לבנות את האינדקס מחדש, או מפתח חסר
         st.error(str(error))
         st.stop()
+    except Exception as error:
+        print(f"Error: {type(error).__name__}: {error}")
+        st.error("שגיאה בהפעלת המערכת (חיבור ל-Gemini או לאינדקס). בדקי את החיבור ונסי לרענן.")
+        st.stop()
     check_index_fresh(state)
-    counter = state["counter"]
 
     st.session_state.setdefault("history", [])
     questions, add_message = st.tabs(["שאלות", "הוספת הודעה"])
     with questions:
-        questions_tab(counter)
+        questions_tab(state)
     with add_message:
         add_message_tab()
 

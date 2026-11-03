@@ -1,12 +1,6 @@
-import argparse
-import json
 import re
-import sys
 
 from bs4 import BeautifulSoup
-
-from src.config import EMAILS_DIR
-from src.messages import email_filename
 
 BLOCK_TAGS = ["p", "div", "li", "tr", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote"]
 
@@ -72,43 +66,3 @@ def clean_body(body, body_type="text"):
     text = remove_quotes(text)
     text = remove_signature(text)
     return normalize_whitespace(text)
-
-
-def load_message(message_id):
-    """Load: טוען הודעה מ-data/emails לפי message_id."""
-    path = EMAILS_DIR / email_filename(message_id)
-    if not path.exists():
-        raise SystemExit(f"Error: לא נמצאה הודעה עם message_id={message_id}")
-    return json.loads(path.read_text(encoding="utf-8"))
-
-
-def main():
-    parser = argparse.ArgumentParser(description="Clean: הצגת לפני/אחרי של ניקוי הודעות")
-    parser.add_argument("message_ids", nargs="*", help="IDs: הודעות להצגה מלאה לפני/אחרי")
-    parser.add_argument("--summary", action="store_true", help="Summary: אורך לפני/אחרי לכל ההודעות, בלי תוכן")
-    args = parser.parse_args()
-    # Why: תוכן הודעות יכול לכלול אימוג'י, שאין בקידוד cp1255 (יומן הבעיות #4) — מחליפים ב-? במקום לקרוס
-    sys.stdout.reconfigure(errors="replace")
-
-    if args.summary:
-        changed = 0
-        for path in sorted(EMAILS_DIR.glob("*.json")):
-            record = json.loads(path.read_text(encoding="utf-8"))
-            before, after = len(record["body"]), len(clean_body(record["body"], record["body_type"]))
-            if before != after:
-                changed += 1
-                print(f"{record['message_id']}: {before} to {after} chars ({record['body_type']})")
-        print(f"Changed: {changed} הודעות")
-
-    for message_id in args.message_ids:
-        record = load_message(message_id)
-        print(f"===== {message_id} ({record['body_type']}) =====")
-        print("--- Before:")
-        print(record["body"])
-        print("--- After:")
-        print(clean_body(record["body"], record["body_type"]))
-        print()
-
-
-if __name__ == "__main__":
-    main()

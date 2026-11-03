@@ -72,4 +72,15 @@
   Bugs found and fixed: name cut by parseaddr (problems_log #10), "Re: Re:".
 - Open: optional "כלים" expander (rebuild index / run eval set) — ask the user.
 
-## Next: Stage 7 — evaluation
+## Stage 7 — evaluation (in progress, 2026-11-04)
+- `tests/evaluate.py`: tune/test split, Recall@k, MRR, batched judge (`gemini-3.5-flash`, 20/day free tier),
+  fixed `asked_on` + date filter, `--no-rewrite`. `eval_set.json`: 29 questions (15 tune / 14 test),
+  incl. natural phrasing (#20-#27) and follow-ups with history (#28-#29).
+- Added on the way: parent-child retrieval (#12), question rewriting (#14, full natural question),
+  stale index protection (#13). Retrieval-only (tune): Recall 1.0, MRR 0.75.
+- Simplicity review vs the teacher's code → light simplification: Gemini only (OpenAI branch removed),
+  `check_setup.py` removed, `clean.py` CLI removed, import without `--dry-run`/`--group`.
+  Bugs from the review: error handling in the app (#15), index opened once (#16).
+- New rule (CLAUDE.md #8): never read files outside the project without asking.
+- Next: judged runs (when the judge quota resets) → experiments on tune → one final test run.
+  Before the defense: explain query.py sources + streaming code line by line.

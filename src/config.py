@@ -3,11 +3,15 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 from llama_index.core import Settings
+from llama_index.core.callbacks import CallbackManager
+from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
+from llama_index.llms.google_genai import GoogleGenAI
 
 # Load: קריאת .env לתוך משתני הסביבה (רק בזמן ריצה, בלי להדפיס ערכים)
 load_dotenv()
 
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini").strip().lower()
+# Provider: רק Gemini. נשמר ב-index_info.json — אם יוחלף ספק, המערכת תבקש בנייה מחדש
+EMBED_PROVIDER = "gemini"
 TIMEZONE = "Asia/Jerusalem"
 
 # Paths: נתיבים יחסית לשורש הפרויקט, כדי שיעבדו מכל תיקייה שממנה מריצים
@@ -38,6 +42,9 @@ TOP_K = 10
 # Note: הציון הוא של LlamaIndex: exp(-distance). ניסוי עם 0.65 / 0.72 / 0.8 — בשלב 7
 SIMILARITY_CUTOFF = 0.72
 
+# Judge: מודל חזק יותר מזה שכותב את התשובות, ושונה ממנו (שלב 7)
+DEFAULT_JUDGE_MODEL = "gemini-3.5-flash"
+
 
 def require_env(name):
     """Get: מחזיר משתנה סביבה, ועוצר עם הודעה ברורה אם הוא חסר."""
@@ -48,59 +55,25 @@ def require_env(name):
 
 
 def setup_models():
-    """Setup: מגדיר את Settings.llm ו-Settings.embed_model לפי LLM_PROVIDER."""
-    # Note: ה-import בתוך כל ענף, כדי שלא יידרשו חבילות של ספק שלא בשימוש
-    if LLM_PROVIDER == "gemini":
-        from llama_index.embeddings.google_genai import GoogleGenAIEmbedding
-        from llama_index.llms.google_genai import GoogleGenAI
-
-        api_key = require_env("GOOGLE_API_KEY")
-        Settings.llm = GoogleGenAI(
-            model=require_env("GEMINI_LLM_MODEL"),
-            api_key=api_key,
-            temperature=LLM_TEMPERATURE,
-        )
-        Settings.embed_model = GoogleGenAIEmbedding(
-            model_name=require_env("GEMINI_EMBED_MODEL"),
-            api_key=api_key,
-        )
-    elif LLM_PROVIDER == "openai":
-        from llama_index.embeddings.openai import OpenAIEmbedding
-        from llama_index.llms.openai import OpenAI
-
-        api_key = require_env("OPENAI_API_KEY")
-        Settings.llm = OpenAI(
-            model=require_env("OPENAI_LLM_MODEL"),
-            api_key=api_key,
-            temperature=LLM_TEMPERATURE,
-        )
-        Settings.embed_model = OpenAIEmbedding(
-            model=require_env("OPENAI_EMBED_MODEL"),
-            api_key=api_key,
-        )
-    else:
-        raise SystemExit(f"Error: ערך לא מוכר LLM_PROVIDER={LLM_PROVIDER} (gemini או openai)")
-
-
-# Judge: ברירת מחדל — מודל חזק יותר מזה שכותב את התשובות, ושונה ממנו
-DEFAULT_JUDGE_MODELS = {"gemini": "gemini-3.5-flash", "openai": "gpt-5"}
+    """Setup: מגדיר את Settings.llm ו-Settings.embed_model (Gemini)."""
+    api_key = require_env("GOOGLE_API_KEY")
+    Settings.llm = GoogleGenAI(
+        model=require_env("GEMINI_LLM_MODEL"),
+        api_key=api_key,
+        temperature=LLM_TEMPERATURE,
+    )
+    Settings.embed_model = GoogleGenAIEmbedding(
+        model_name=require_env("GEMINI_EMBED_MODEL"),
+        api_key=api_key,
+    )
 
 
 def judge_llm(answer_model):
     """Judge: LLM נפרד ששופט תשובות בהערכה. עוצר אם הוא זהה למודל שכותב את התשובות."""
-    # Note: callback_manager ריק — כדי שטוקני השופט לא ייספרו כטוקנים של המערכת עצמה
-    from llama_index.core.callbacks import CallbackManager
-
-    model = os.getenv(f"{LLM_PROVIDER.upper()}_JUDGE_MODEL", DEFAULT_JUDGE_MODELS[LLM_PROVIDER]).strip()
+    model = os.getenv("GEMINI_JUDGE_MODEL", DEFAULT_JUDGE_MODEL).strip()
     if model == answer_model:
         raise SystemExit(f"Error: מודל השופט ({model}) זהה למודל שכותב את התשובות — מודל לא ישפוט את עצמו")
-    if LLM_PROVIDER == "gemini":
-        from llama_index.llms.google_genai import GoogleGenAI
-
-        # Note: max_retries גבוה — עומס (503) נפוץ במסלול החינמי, וההערכה ארוכה
-        return GoogleGenAI(model=model, api_key=require_env("GOOGLE_API_KEY"), temperature=0.0,
-                           max_retries=8, callback_manager=CallbackManager([]))
-    from llama_index.llms.openai import OpenAI
-
-    return OpenAI(model=model, api_key=require_env("OPENAI_API_KEY"), temperature=0.0,
-                  callback_manager=CallbackManager([]))
+    # Note: callback_manager ריק — כדי שטוקני השופט לא ייספרו כטוקנים של המערכת עצמה
+    # Note: max_retries גבוה — עומס (503) נפוץ במסלול החינמי
+    return GoogleGenAI(model=model, api_key=require_env("GOOGLE_API_KEY"), temperature=0.0,
+                       max_retries=8, callback_manager=CallbackManager([]))

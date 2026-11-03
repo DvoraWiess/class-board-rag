@@ -15,7 +15,7 @@ from src.config import (
     CHUNK_OVERLAP,
     CHUNK_SIZE,
     EMAILS_DIR,
-    LLM_PROVIDER,
+    EMBED_PROVIDER,
     PARENT_EXCERPT_CHARS,
     TEXT_VERSION,
     TIMEZONE,
@@ -104,7 +104,7 @@ def load_records():
 def current_settings():
     """Settings: מה שחייב להיות זהה בין האינדקס השמור להגדרות הנוכחיות."""
     return {
-        "embed_provider": LLM_PROVIDER,
+        "embed_provider": EMBED_PROVIDER,
         "embed_model": Settings.embed_model.model_name,
         "chunk_size": CHUNK_SIZE,
         "chunk_overlap": CHUNK_OVERLAP,

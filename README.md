@@ -16,7 +16,9 @@
 
 ## טכנולוגיות
 Python 3.13, LlamaIndex, Google Gemini (LLM + Embeddings), Chroma, Streamlit.
-אפשר לעבור ל-OpenAI בשינוי משתנה אחד ב-`.env` (`LLM_PROVIDER`).
+כל הגדרת המודלים נמצאת בפונקציה אחת: `setup_models()` ב-`src/config.py`. מעבר לספק אחר (למשל OpenAI)
+= להחליף שם את שתי המחלקות (`GoogleGenAI`, `GoogleGenAIEmbedding`) ולהתקין את החבילות שלו,
+ואז לבנות את האינדקס מחדש (ווקטורים של מודלים שונים לא ניתנים להשוואה — המערכת מזהה ועוצרת).
 
 ## התקנה (Windows / PowerShell)
 ```powershell
@@ -25,11 +27,7 @@ python -m venv .venv
 Copy-Item .env.example .env
 ```
 לפתוח את `.env` ולמלא ידנית את `GOOGLE_API_KEY` (מפתח חינמי מ-Google AI Studio).
-
-בדיקה שההגדרה עובדת:
-```powershell
-.\.venv\Scripts\python.exe -m src.check_setup
-```
+אם המפתח חסר — האפליקציה מציגה הודעה בעברית עם שם המשתנה החסר.
 
 ## הרצה
 ```powershell

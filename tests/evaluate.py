@@ -10,7 +10,7 @@ from datetime import datetime
 
 from llama_index.core import Settings
 
-from src.config import PROJECT_ROOT, SIMILARITY_CUTOFF, TIMEZONE, TOP_K, judge_llm, setup_models
+from src.config import PROJECT_ROOT, SIMILARITY_CUTOFF, TOP_K, judge_llm, setup_models
 from src.query import ask, attach_token_counter
 
 EVAL_SET_PATH = PROJECT_ROOT / "tests" / "eval_set.json"

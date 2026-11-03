@@ -153,13 +153,15 @@ def attach_token_counter():
     return counter
 
 
-def build_engine(streaming=False, top_k=TOP_K, cutoff=SIMILARITY_CUTOFF, now=None):
+def build_engine(streaming=False, top_k=TOP_K, cutoff=SIMILARITY_CUTOFF, now=None, index=None):
     """Engine: Query Engine עם שליפה רחבה, סף, מיון כרונולוגי ופרומפט בעברית.
 
     Note: now = "היום". ברירת מחדל — עכשיו. בהערכה — תאריך קבוע, ואז נשלפות רק הודעות
     שנכתבו עד אז (MetadataFilters על date_ts), כדי שהודעות חדשות לא ישנו את התוצאות.
+    Note: index — בממשק מגיע מ-st.cache_resource (נפתח פעם אחת); בלעדיו נפתח כאן.
     """
-    index, _ = open_index()
+    if index is None:
+        index, _ = open_index()
     filters = None
     if now is None:
         now = datetime.now(ZoneInfo(TIMEZONE))
@@ -321,9 +323,9 @@ class SourcesHidingStream:
             yield self.full_text[sent:end]
 
 
-def ask_stream(question, counter, history=None):
+def ask_stream(question, counter, history=None, index=None):
     """Stream: כמו ask, אבל מחזיר (זרם, nodes, ניסוח לחיפוש). זרם None = אין הודעות מעל הסף."""
-    engine, bundle, nodes, search_query = prepare(question, counter, history, True, True, {})
+    engine, bundle, nodes, search_query = prepare(question, counter, history, True, True, {"index": index})
     if not nodes:
         return None, nodes, search_query
     response = engine.synthesize(bundle, nodes)
