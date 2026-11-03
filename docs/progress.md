@@ -22,4 +22,12 @@
 - Planned for later stages: `index_new_messages()` (stage 3), tabs "שאלות" / "הוספת הודעה" (stage 6),
   contradiction prompt (stage 5).
 
-## Next: Stage 2 — cleaning
+## Stage 2 — cleaning (done, waiting for approval/commit, 2026-11-03)
+- Decisions: BeautifulSoup for HTML; own regex for quotes (email_reply_parser is English-only);
+  clean at index time, raw body stays in JSON; informal messages are NOT filtered — measure in stage 4.
+- `src/clean.py`: `clean_body(body, body_type)` = HTML → remove bidi marks → quotes → signature → whitespace.
+  Quote header must contain a digit (date/time), so "המורה כתבה:" is kept.
+  CLI: `python -m src.clean --summary` (lengths only), `python -m src.clean "<id>"` (before/after).
+- Result on samples: exactly the 5 designed messages changed (#02, #10, #11, #13, #23). Edge cases pass.
+
+## Next: Stage 3 — indexing
