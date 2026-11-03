@@ -2,10 +2,11 @@
 import src  # noqa: F401  (Must: ראשון — מפעיל את truststore)
 
 import streamlit as st
+from chromadb.api.client import SharedSystemClient
 
 from src import import_export
 from src.config import PROJECT_ROOT, setup_models
-from src.indexer import index_new_messages, load_records, readable_date, sender_name
+from src.indexer import index_built_at, index_new_messages, load_records, readable_date, sender_name
 from src.messages import new_post, save_email, seed_samples
 from src.query import NO_INFO_ANSWER, Answer, ask_stream, attach_token_counter, finish_stream
 
@@ -29,7 +30,24 @@ def startup():
     counter = attach_token_counter()
     seed_samples()
     index_new_messages()
-    return counter
+    return {"counter": counter, "built_at": index_built_at()}
+
+
+def check_index_fresh(state):
+    """Fresh: אם האינדקס נבנה מחדש מתהליך אחר מאז שהאפליקציה עלתה — טוענים מחדש.
+
+    Why: Chroma מקומי לא מיועד לכמה תהליכים בו-זמנית; תהליך פתוח ראה מצב ישן (יומן הבעיות #13).
+    """
+    built_at = index_built_at()
+    if built_at is None:
+        # Note: אין index_info.json — בנייה מחדש באמצע. לא טוענים, כדי לא לאנדקס במקביל לתהליך האחר
+        st.warning("האינדקס נבנה כרגע מחדש. נסי שוב בעוד רגע.")
+        st.stop()
+    if built_at != state["built_at"]:
+        SharedSystemClient.clear_system_cache()
+        st.cache_resource.clear()
+        st.toast("האינדקס נבנה מחדש — נטען מחדש")
+        st.rerun()
 
 
 def index_now():
@@ -41,8 +59,10 @@ def index_now():
         return 0
 
 
-def render_answer(answer):
-    """Answer: מקורות מעוצבים וטוקנים — מתחת לטקסט התשובה."""
+def render_answer(answer, question):
+    """Answer: ניסוח החיפוש, מקורות מעוצבים וטוקנים — מתחת לטקסט התשובה."""
+    if answer.search_query and answer.search_query != question:
+        st.caption(f"חיפשתי: {answer.search_query}")
     if answer.sources:
         earlier = " · יש גם הודעות קודמות בנושא" if answer.has_earlier else ""
         st.caption(f"מבוסס על הודעה מ{answer.latest_date}{earlier}")
@@ -54,15 +74,15 @@ def render_answer(answer):
     t = answer.tokens
     if answer.llm_called:
         st.caption(
-            f"טוקנים: LLM {t['llm_prompt']} נשלחו + {t['llm_completion']} בתשובה (נתון מ-Gemini) · "
-            f"Embedding {t['embedding']} (הערכה)"
+            f"טוקנים: LLM {t['llm_prompt']} נשלחו + {t['llm_completion']} בתשובה, כולל הניסוח לחיפוש "
+            f"(נתון מ-Gemini) · Embedding {t['embedding']} (הערכה)"
         )
     else:
-        st.caption(f"לא נמצאה הודעה מתאימה — לא נשלחה קריאה ל-LLM · Embedding {t['embedding']} (הערכה)")
+        st.caption(f"לא נמצאה הודעה מתאימה — לא נשלחה קריאה ל-LLM שעונה · Embedding {t['embedding']} (הערכה)")
 
 
 def questions_tab(counter):
-    """Tab: שאלות — היסטוריה בתצוגה בלבד; כל שאלה נשלחת ל-LLM בנפרד, בלי ההיסטוריה."""
+    """Tab: שאלות. השאלה והתשובה האחרונות נשלחות רק לשלב הניסוח מחדש — לא ל-LLM שעונה."""
     if st.button("שיחה חדשה"):
         st.session_state.history = []
 
@@ -71,23 +91,26 @@ def questions_tab(counter):
             st.markdown(item["question"])
         with st.chat_message("assistant"):
             st.markdown(item["answer"].text)
-            render_answer(item["answer"])
+            render_answer(item["answer"], item["question"])
 
     question = st.chat_input("שאלי שאלה על ההודעות...")
     if not question:
         return
+    history = [(item["question"], item["answer"].text) for item in st.session_state.history]
     with st.chat_message("user"):
         st.markdown(question)
     with st.chat_message("assistant"):
-        stream, nodes = ask_stream(question, counter)
+        stream, nodes, search_query = ask_stream(question, counter, history)
         if stream is None:
             st.markdown(NO_INFO_ANSWER)
-            answer = Answer(NO_INFO_ANSWER, tokens={"llm_prompt": 0, "llm_completion": 0,
-                                                    "embedding": counter.total_embedding_token_count})
+            answer = Answer(NO_INFO_ANSWER, search_query=search_query,
+                            tokens={"llm_prompt": counter.prompt_llm_token_count,
+                                    "llm_completion": counter.completion_llm_token_count,
+                                    "embedding": counter.total_embedding_token_count})
         else:
             st.write_stream(stream)
-            answer = finish_stream(stream, nodes, counter)
-        render_answer(answer)
+            answer = finish_stream(stream, nodes, counter, search_query)
+        render_answer(answer, question)
     st.session_state.history.append({"question": question, "answer": answer})
 
 
@@ -156,11 +179,13 @@ def main():
     st.caption("ההודעות ההתחלתיות הן נתוני דוגמה מומצאים.")
 
     try:
-        counter = startup()
+        state = startup()
     except SystemExit as error:
         # Note: למשל — מודל ה-Embeddings השתנה ויש לבנות את האינדקס מחדש
         st.error(str(error))
         st.stop()
+    check_index_fresh(state)
+    counter = state["counter"]
 
     st.session_state.setdefault("history", [])
     questions, add_message = st.tabs(["שאלות", "הוספת הודעה"])

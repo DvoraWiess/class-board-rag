@@ -41,11 +41,31 @@ QA_PROMPT = PromptTemplate(
     "6. מידע חלקי — אמור מה ידוע ומה חסר.\n"
     f"7. אם אין בהודעות תשובה לשאלה — כתוב בדיוק: \"{NO_INFO_ANSWER}\"\n"
     "8. ענה בעברית, בקצרה ובבהירות.\n"
-    "9. בשורה האחרונה כתוב את מספרי ההודעות שעליהן התשובה מבוססת, בפורמט: \"מקורות: 2, 5\". "
+    "9. אם מופיעה \"הכוונה בהקשר השיחה\" — זו הבנה של השאלה לפי השיחה הקודמת. היעזר בה, "
+    "אבל אם היא סותרת את השאלה עצמה — השאלה עצמה קובעת.\n"
+    "10. בשורה האחרונה כתוב את מספרי ההודעות שעליהן התשובה מבוססת, בפורמט: \"מקורות: 2, 5\". "
     "אם לא השתמשת באף הודעה — \"מקורות: אין\".\n\n"
-    "שאלה: {query_str}\n"
+    "{query_str}\n"
     "תשובה:"
 )
+
+# Why: ניסוח מחדש לפני החיפוש — מסיר פתיחות ("מישהי יודעת...", בעיה #8) ומשלים שאלות המשך (בעיה #14)
+REWRITE_PROMPT = (
+    "אתה מנסח מחדש שאלות של תלמידות, לפני חיפוש בלוח ההודעות של הכיתה.\n"
+    "היום: {today}.\n"
+    "{previous}"
+    "השאלה: {question}\n\n"
+    "כתוב את השאלה מחדש כשאלה עצמאית וקצרה לחיפוש:\n"
+    "1. הסר פתיחות כמו \"האם מישהי יודעת\", \"מישהי שמעה אם\", \"בנות\", \"תודה מראש\".\n"
+    "2. אם זו שאלת המשך (\"ומתי הוא?\", \"זה לפי...?\") — השלם מהשיחה הקודמת על מה מדובר.\n"
+    "3. אם יש בשאלה \"היום\", \"מחר\" או \"אתמול\" — השאר את המילה והוסף בסוגריים את התאריך המלא. "
+    "יום בשבוע (\"יום שני\") — השאר כמו שהוא, בלי להוסיף תאריך.\n"
+    "4. שמור בדיוק כמו שהם: תאריכים, שעות, שמות ומקצועות. אל תחליף מילה במילה נרדפת, "
+    "ואל תוסיף מידע שלא נשאל.\n"
+    "5. אל תענה על השאלה.\n"
+    "כתוב רק את השאלה המנוסחת, בשורה אחת."
+)
+HISTORY_ANSWER_CHARS = 300
 
 # Note: "מקורות: ..." בשורה האחרונה של תשובת ה-LLM
 SOURCES_LINE = re.compile(r"\n?[ \t]*\**מקורות:\**\s*(.*?)\s*$")
@@ -108,6 +128,7 @@ class Answer:
     sources_fallback: bool = False
     tokens: dict = field(default_factory=dict)
     prompt: Optional[str] = None
+    search_query: Optional[str] = None
 
     @property
     def latest_date(self):
@@ -155,6 +176,49 @@ def build_engine(streaming=False, top_k=TOP_K, cutoff=SIMILARITY_CUTOFF, now=Non
         text_qa_template=QA_PROMPT.partial_format(today=readable_date(now.isoformat())),
         streaming=streaming,
     )
+
+
+def rewrite_question(question, history=None, now=None):
+    """Rewrite: שאלה עצמאית ונקייה לחיפוש. history = [(שאלה, תשובה), ...] — רק האחרונה נשלחת.
+
+    Note: אם הקריאה נכשלת — ממשיכים עם השאלה המקורית (הניסוח הוא שיפור, לא תנאי).
+    """
+    now = now or datetime.now(ZoneInfo(TIMEZONE))
+    previous = ""
+    if history:
+        last_question, last_answer = history[-1]
+        previous = f"השאלה הקודמת: {last_question}\nהתשובה הקודמת: {last_answer[:HISTORY_ANSWER_CHARS]}\n"
+    prompt = REWRITE_PROMPT.format(today=readable_date(now.isoformat()), previous=previous, question=question)
+    try:
+        lines = Settings.llm.complete(prompt).text.strip().splitlines()
+    except Exception as error:
+        # Why: לא בשקט — בהערכה זה היה מערבב "עם" ו"בלי" ניסוח בלי שנדע
+        print(f"Warning: הניסוח מחדש נכשל ({type(error).__name__}) — מחפשים עם השאלה המקורית")
+        return question
+    rewritten = lines[0].strip().strip('"״') if lines else ""
+    return rewritten or question
+
+
+def make_bundle(question, search_query):
+    """Bundle: החיפוש מקבל את הניסוח מחדש (custom_embedding_strs); ה-LLM שעונה — את השאלה המקורית וגם את הניסוח.
+
+    Why: אם הניסוח טועה, ה-LLM עדיין רואה מה נשאל בפועל (החוברת, פרק 6: הרחבה לא נכונה משנה כוונה).
+    """
+    if search_query == question:
+        return QueryBundle(query_str=f"שאלה: {question}", custom_embedding_strs=[question])
+    return QueryBundle(
+        query_str=f"שאלה: {question}\nהכוונה בהקשר השיחה: {search_query}",
+        custom_embedding_strs=[search_query],
+    )
+
+
+def prepare(question, counter, history, rewrite, streaming, engine_options):
+    """Prepare: איפוס מונה, ניסוח מחדש, בניית Engine ושליפה. משותף ל-ask ול-ask_stream."""
+    counter.reset_counts()
+    search_query = rewrite_question(question, history, engine_options.get("now")) if rewrite else question
+    engine = build_engine(streaming=streaming, **engine_options)
+    bundle = make_bundle(question, search_query)
+    return engine, bundle, engine.retrieve(bundle), search_query
 
 
 def split_sources(text, node_count):
@@ -205,22 +269,20 @@ def token_summary(counter):
     }
 
 
-def ask(question, counter, **engine_options):
-    """Ask: שאלה → תשובה עם מקורות. בלי הודעות מעל הסף — "לא מצאתי" בלי לקרוא ל-LLM.
+def ask(question, counter, history=None, rewrite=True, **engine_options):
+    """Ask: שאלה → תשובה עם מקורות. בלי הודעות מעל הסף — "לא מצאתי" בלי לקרוא ל-LLM שעונה.
 
     Note: engine_options (top_k, cutoff, now) — להערכה ולניסויים. מחזיר גם את ה-nodes שנשלחו ל-LLM.
+    Note: טוקני ה-LLM כוללים גם את קריאת הניסוח מחדש.
     """
-    counter.reset_counts()
-    engine = build_engine(**engine_options)
-    bundle = QueryBundle(question)
-    nodes = engine.retrieve(bundle)
+    engine, bundle, nodes, search_query = prepare(question, counter, history, rewrite, False, engine_options)
     if not nodes:
-        return Answer(text=NO_INFO_ANSWER, tokens=token_summary(counter)), nodes
+        return Answer(text=NO_INFO_ANSWER, tokens=token_summary(counter), search_query=search_query), nodes
 
     response = engine.synthesize(bundle, nodes)
     text, sources, fallback = finalize(str(response), nodes)
     prompt = counter.llm_token_counts[-1].prompt if counter.llm_token_counts else None
-    return Answer(text, sources, True, fallback, token_summary(counter), prompt), nodes
+    return Answer(text, sources, True, fallback, token_summary(counter), prompt, search_query), nodes
 
 
 class SourcesHidingStream:
@@ -257,23 +319,20 @@ class SourcesHidingStream:
             yield self.full_text[sent:end]
 
 
-def ask_stream(question, counter):
-    """Stream: כמו ask, אבל מחזיר (זרם, nodes). זרם None = אין הודעות מעל הסף, בלי קריאה ל-LLM."""
-    counter.reset_counts()
-    engine = build_engine(streaming=True)
-    bundle = QueryBundle(question)
-    nodes = engine.retrieve(bundle)
+def ask_stream(question, counter, history=None):
+    """Stream: כמו ask, אבל מחזיר (זרם, nodes, ניסוח לחיפוש). זרם None = אין הודעות מעל הסף."""
+    engine, bundle, nodes, search_query = prepare(question, counter, history, True, True, {})
     if not nodes:
-        return None, nodes
+        return None, nodes, search_query
     response = engine.synthesize(bundle, nodes)
-    return SourcesHidingStream(response.response_gen), nodes
+    return SourcesHidingStream(response.response_gen), nodes, search_query
 
 
-def finish_stream(stream, nodes, counter):
+def finish_stream(stream, nodes, counter, search_query=None):
     """Finish: אחרי שהזרם הסתיים — בונה Answer מלא עם מקורות וטוקנים."""
     text, sources, fallback = finalize(stream.full_text, nodes)
     prompt = counter.llm_token_counts[-1].prompt if counter.llm_token_counts else None
-    return Answer(text, sources, True, fallback, token_summary(counter), prompt)
+    return Answer(text, sources, True, fallback, token_summary(counter), prompt, search_query)
 
 
 def print_answer(question, answer, show_prompt):
@@ -282,6 +341,8 @@ def print_answer(question, answer, show_prompt):
         print(answer.prompt)
         print("==============================")
     print(f"Question: {question}")
+    if answer.search_query and answer.search_query != question:
+        print(f"Search query: {answer.search_query}")
     print(f"Answer: {answer.text}")
     if not answer.llm_called:
         print("Note: אף הודעה לא עברה את הסף — לא נשלחה קריאה ל-LLM")

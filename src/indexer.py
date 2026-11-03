@@ -126,10 +126,21 @@ def check_index_info():
         )
 
 
+def index_built_at():
+    """Built: מתי האינדקס נבנה (משתנה רק בבנייה מחדש). None = אין קובץ — כנראה בנייה מחדש באמצע."""
+    if not INDEX_INFO_PATH.exists():
+        return None
+    return json.loads(INDEX_INFO_PATH.read_text(encoding="utf-8")).get("built_at", "legacy")
+
+
 def save_index_info(collection):
-    """Save: שומר לצד האינדקס את ההגדרות שבהן נבנה, כולל ממד הווקטור."""
+    """Save: שומר לצד האינדקס את ההגדרות שבהן נבנה, כולל ממד הווקטור וזמן הבנייה."""
     sample = collection.get(limit=1, include=["embeddings"])
-    info = current_settings() | {"dimension": len(sample["embeddings"][0])}
+    # Note: built_at נשמר מהקובץ הקיים — הוספה מצטברת לא משנה אותו, רק בנייה מחדש (rebuild מוחק את הקובץ)
+    built_at = index_built_at()
+    if built_at in (None, "legacy"):
+        built_at = datetime.now(ZoneInfo(TIMEZONE)).isoformat(timespec="seconds")
+    info = current_settings() | {"dimension": len(sample["embeddings"][0]), "built_at": built_at}
     INDEX_INFO_PATH.write_text(json.dumps(info, ensure_ascii=False, indent=2), encoding="utf-8")
 
 

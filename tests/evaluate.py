@@ -106,12 +106,13 @@ def write_markdown(path, settings, summary, results):
     """Report: טבלה לקריאה — כדי לעבור על הנימוקים של השופט."""
     lines = [f"# Evaluation — {settings['split']}", "", "```", json.dumps(settings, ensure_ascii=False, indent=2),
              json.dumps(summary, ensure_ascii=False, indent=2), "```", "",
-             "| # | type | correct | recall | MRR | question | answer | judge reason |", "|---|---|---|---|---|---|---|---|"]
+             "| # | type | correct | recall | MRR | question | search query | answer | judge reason |",
+             "|---|---|---|---|---|---|---|---|---|"]
     for r in results:
         mark = {True: "✓", False: "✗", None: "?"}[r["correct"]]
         answer = r["answer"].replace("\n", " ").replace("|", "/")
         lines.append(f"| {r['id']} | {r['type']} | {mark} | {r['recall']} | {r['mrr']} | {r['question']} | "
-                     f"{answer} | {r['reason']} |")
+                     f"{r.get('search_query') or ''} | {answer} | {r['reason']} |")
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -121,7 +122,9 @@ def main():
     parser.add_argument("--top-k", type=int, default=TOP_K)
     parser.add_argument("--cutoff", type=float, default=SIMILARITY_CUTOFF)
     parser.add_argument("--tag", default="", help="Tag: שם קצר לניסוי, נכנס לשם הקובץ")
-    parser.add_argument("--pause", type=float, default=3.0, help="Pause: שניות בין שאלות (מגבלת בקשות)")
+    parser.add_argument("--no-rewrite", action="store_true", help="No rewrite: בלי ניסוח מחדש (להשוואה לפני/אחרי)")
+    # Note: ל-lite יש 15 בקשות לדקה, וכל שאלה = 2 קריאות (ניסוח + תשובה) — לכן 9 שניות בין שאלות
+    parser.add_argument("--pause", type=float, default=9.0, help="Pause: שניות בין שאלות (מגבלת בקשות)")
     args = parser.parse_args()
     # Why: תשובות יכולות לכלול תווים שאין בקידוד cp1255 (יומן הבעיות #4)
     sys.stdout.reconfigure(errors="replace")
@@ -134,13 +137,17 @@ def main():
     counter = attach_token_counter()
     judge_model = judge_llm(Settings.llm.model)
     settings = {"split": args.split, "top_k": args.top_k, "cutoff": args.cutoff, "llm": Settings.llm.model,
-                "judge": judge_model.model, "asked_on": eval_set["asked_on"], "tag": args.tag}
+                "judge": judge_model.model, "rewrite": not args.no_rewrite, "asked_on": eval_set["asked_on"],
+                "tag": args.tag}
     print(f"Settings: {settings}")
 
     results = []
     for item in items:
+        # Note: שאלת המשך — השיחה הקודמת קבועה בקובץ, כדי שהבדיקה תהיה ניתנת לשחזור
+        history = [(h["question"], h["answer"]) for h in item.get("history", [])]
         try:
-            answer, nodes = ask(item["question"], counter, top_k=args.top_k, cutoff=args.cutoff, now=now)
+            answer, nodes = ask(item["question"], counter, history=history, rewrite=not args.no_rewrite,
+                                top_k=args.top_k, cutoff=args.cutoff, now=now)
         except Exception as error:
             print(f"Q{item['id']:<3}ERROR  {type(error).__name__}: {str(error)[:80]}")
             results.append({"id": item["id"], "type": item["type"], "question": item["question"],
@@ -152,13 +159,13 @@ def main():
         recall, mrr = retrieval_metrics(nodes, item["relevant_ids"])
         results.append({
             "id": item["id"], "type": item["type"], "question": item["question"], "expected": item["expected"],
-            "answer": answer.text, "correct": None, "reason": "",
+            "search_query": answer.search_query, "answer": answer.text, "correct": None, "reason": "",
             "recall": None if recall is None else round(recall, 3), "mrr": None if mrr is None else round(mrr, 3),
             "llm_called": answer.llm_called, "tokens": answer.tokens,
             "sent_ids": [n.node.metadata["message_id"] for n in nodes],
             "cited": [s["message_id"] for s in answer.sources],
         })
-        print(f"Q{item['id']:<3}{item['type']:<14} recall={recall} mrr={mrr}")
+        print(f"Q{item['id']:<3}{item['type']:<14} recall={recall} mrr={mrr} | search: {answer.search_query}")
         time.sleep(args.pause)
 
     verdicts = judge_all(judge_model, results)

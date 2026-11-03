@@ -1,0 +1,452 @@
+{
+  "settings": {
+    "split": "tune",
+    "top_k": 10,
+    "cutoff": 0.72,
+    "llm": "gemini-3.5-flash-lite",
+    "judge": "gemini-3.5-flash",
+    "rewrite": true,
+    "asked_on": "2026-11-03T21:00:00+02:00",
+    "tag": "retrieval-only-after"
+  },
+  "summary": {
+    "questions": 15,
+    "not_judged": 15,
+    "accuracy": null,
+    "recall_at_k": 1.0,
+    "mrr": 0.653,
+    "llm_calls": 14,
+    "avg_llm_tokens_real": 1478.0,
+    "avg_embedding_tokens_estimate": 16.2
+  },
+  "results": [
+    {
+      "id": 1,
+      "type": "change",
+      "question": "מתי המבחן באנגלית?",
+      "expected": "יום שני 9.11, בשעה השנייה. נדחה מיום חמישי 5.11.",
+      "search_query": "המבחן באנגלית",
+      "answer": "המבחן באנגלית יתקיים ביום שני 9.11.2026 בשעה השנייה (העדכון נכתב על ידי יעל אברהם ביום חמישי 29.10.2026).",
+      "correct": null,
+      "reason": "Judge error: ClientError",
+      "recall": 1.0,
+      "mrr": 0.25,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1736,
+        "llm_completion": 69,
+        "embedding": 14
+      },
+      "sent_ids": [
+        "<sample-03@sample.test>",
+        "<sample-04@sample.test>",
+        "<sample-05@sample.test>",
+        "<sample-06@sample.test>",
+        "<sample-12@sample.test>",
+        "<sample-13@sample.test>",
+        "<sample-14@sample.test>",
+        "<sample-25@sample.test>"
+      ],
+      "cited": [
+        "<sample-12@sample.test>"
+      ]
+    },
+    {
+      "id": 2,
+      "type": "thread",
+      "question": "מה החומר למבחן באנגלית?",
+      "expected": "יחידות 3 ו-4 בספר, וגם הסיפור שקראו בכיתה.",
+      "search_query": "מה החומר למבחן באנגלית?",
+      "answer": "החומר למבחן באנגלית כולל את יחידות 3 ו-4 בספר, וכן את הסיפור שקראנו בכיתה.",
+      "correct": null,
+      "reason": "Judge error: ClientError",
+      "recall": 1.0,
+      "mrr": 0.5,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1889,
+        "llm_completion": 57,
+        "embedding": 22
+      },
+      "sent_ids": [
+        "<sample-03@sample.test>",
+        "<sample-04@sample.test>",
+        "<sample-05@sample.test>",
+        "<sample-06@sample.test>",
+        "<sample-10@sample.test>",
+        "<sample-12@sample.test>",
+        "<sample-13@sample.test>",
+        "<sample-14@sample.test>",
+        "<sample-21@sample.test>",
+        "<sample-25@sample.test>"
+      ],
+      "cited": [
+        "<sample-03@sample.test>",
+        "<sample-05@sample.test>",
+        "<sample-12@sample.test>"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "change",
+      "question": "עד מתי צריך להגיש את העבודה בהיסטוריה?",
+      "expected": "עד יום שלישי 17.11.",
+      "search_query": "מועד הגשת עבודה בהיסטוריה",
+      "answer": "את העבודה בהיסטוריה צריך להגיש עד יום שלישי 17.11.2026. (העדכון נכתב על ידי תמר כהן ביום שני 2.11.2026).",
+      "correct": null,
+      "reason": "Judge error: ClientError",
+      "recall": 1.0,
+      "mrr": 1.0,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1165,
+        "llm_completion": 73,
+        "embedding": 25
+      },
+      "sent_ids": [
+        "<sample-10@sample.test>",
+        "<sample-19@sample.test>"
+      ],
+      "cited": [
+        "<sample-19@sample.test>"
+      ]
+    },
+    {
+      "id": 5,
+      "type": "contradiction",
+      "question": "מתי המבחן במדעים?",
+      "expected": "סתירה: לפי אביגיל ביום ראשון 15.11, לפי מיכל ביום שני 16.11. המידע מתלמידות — כדאי לוודא.",
+      "search_query": "מבחן במדעים מתי",
+      "answer": "יש שתי גרסאות שונות לגבי מועד המבחן במדעים בהודעות של התלמידות (מכיוון שהמידע הגיע מתלמידות, כדאי לוודא מול גורם רשמי):\n- לפי אביגיל גולד (2.11.2026), המבחן ביום ראשון 15.11.2026.\n- לפי מיכל רוזן (3.11.2026), המבחן ביום שני 16.11.2026.",
+      "correct": null,
+      "reason": "Judge error: ClientError",
+      "recall": 1.0,
+      "mrr": 1.0,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1343,
+        "llm_completion": 150,
+        "embedding": 14
+      },
+      "sent_ids": [
+        "<sample-04@sample.test>",
+        "<sample-21@sample.test>",
+        "<sample-22@sample.test>",
+        "<sample-23@sample.test>",
+        "<sample-25@sample.test>"
+      ],
+      "cited": [
+        "<sample-21@sample.test>",
+        "<sample-22@sample.test>"
+      ]
+    },
+    {
+      "id": 6,
+      "type": "partial",
+      "question": "כמה עולה הטיול השנתי?",
+      "expected": "עוד לא ידוע — על התשלום עוד לא אמרו. (הטיול ביום חמישי 12.11.)",
+      "search_query": "עלות הטיול השנתי",
+      "answer": "לפי ההודעות, עדיין לא אמרו דבר על התשלום לטיול השנתי.",
+      "correct": null,
+      "reason": "Judge error: ClientError",
+      "recall": 1.0,
+      "mrr": 0.5,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1315,
+        "llm_completion": 41,
+        "embedding": 15
+      },
+      "sent_ids": [
+        "<sample-07@sample.test>",
+        "<sample-16@sample.test>",
+        "<sample-26@sample.test>"
+      ],
+      "cited": [
+        "<sample-07@sample.test>",
+        "<sample-16@sample.test>"
+      ]
+    },
+    {
+      "id": 8,
+      "type": "relative_date",
+      "question": "מה יש מחר?",
+      "expected": "יום רביעי 4.11: יום קצר, מסיימים ב-12:30 בגלל אסיפת ההורים (האסיפה ב-18:00).",
+      "search_query": "מה יש מחר (4.11.2026)?",
+      "answer": "מחר, יום רביעי 4.11.2026:\n- מסיימים ב-12:30 בגלל אסיפת ההורים.\n- צריך להגיש את דף עבודה 7 במתמטיקה.\n- מתקיימת אסיפת הורים בשעה 18:00 באולם בית הספר.",
+      "correct": null,
+      "reason": "Judge error: ClientError",
+      "recall": 1.0,
+      "mrr": 0.5,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1533,
+        "llm_completion": 110,
+        "embedding": 16
+      },
+      "sent_ids": [
+        "<sample-03@sample.test>",
+        "<sample-07@sample.test>",
+        "<sample-09@sample.test>",
+        "<sample-11@sample.test>",
+        "<sample-15@sample.test>",
+        "<sample-20@sample.test>",
+        "<sample-24@sample.test>"
+      ],
+      "cited": [
+        "<sample-11@sample.test>",
+        "<sample-15@sample.test>",
+        "<sample-24@sample.test>"
+      ]
+    },
+    {
+      "id": 10,
+      "type": "simple",
+      "question": "מתי אסיפת ההורים?",
+      "expected": "יום רביעי 4.11 בשעה 18:00 באולם בית הספר.",
+      "search_query": "אסיפת הורים",
+      "answer": "אסיפת ההורים תתקיים ביום רביעי, 4.11.2026, בשעה 18:00 באולם בית הספר.",
+      "correct": null,
+      "reason": "Judge error: ClientError",
+      "recall": 1.0,
+      "mrr": 1.0,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1096,
+        "llm_completion": 50,
+        "embedding": 11
+      },
+      "sent_ids": [
+        "<sample-11@sample.test>",
+        "<sample-24@sample.test>"
+      ],
+      "cited": [
+        "<sample-11@sample.test>"
+      ]
+    },
+    {
+      "id": 12,
+      "type": "simple",
+      "question": "מה צריך לעשות בשיעורי הבית במדעים?",
+      "expected": "לסכם את פרק 2 בספר (התא), להגיש ביום ראשון 8.11.",
+      "search_query": "שיעורי בית במדעים",
+      "answer": "לפי ההודעות, שיעורי הבית במדעים הם לסכם את פרק 2 בספר (התא), ולהגיש ביום ראשון 8.11.2026.",
+      "correct": null,
+      "reason": "Judge error: ClientError",
+      "recall": 1.0,
+      "mrr": 1.0,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1452,
+        "llm_completion": 61,
+        "embedding": 15
+      },
+      "sent_ids": [
+        "<sample-02@sample.test>",
+        "<sample-08@sample.test>",
+        "<sample-15@sample.test>",
+        "<sample-17@sample.test>",
+        "<sample-21@sample.test>",
+        "<sample-23@sample.test>"
+      ],
+      "cited": [
+        "<sample-23@sample.test>"
+      ]
+    },
+    {
+      "id": 14,
+      "type": "no_info",
+      "question": "מתי המבחן בספרות?",
+      "expected": "לא מצאתי מידע על כך בהודעות.",
+      "search_query": "מתי המבחן בספרות?",
+      "answer": "לא מצאתי מידע על כך בהודעות.",
+      "correct": null,
+      "reason": "Judge error: ClientError",
+      "recall": null,
+      "mrr": null,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1896,
+        "llm_completion": 27,
+        "embedding": 18
+      },
+      "sent_ids": [
+        "<sample-03@sample.test>",
+        "<sample-04@sample.test>",
+        "<sample-05@sample.test>",
+        "<sample-10@sample.test>",
+        "<sample-12@sample.test>",
+        "<sample-13@sample.test>",
+        "<sample-14@sample.test>",
+        "<sample-21@sample.test>",
+        "<sample-22@sample.test>",
+        "<sample-25@sample.test>"
+      ],
+      "cited": []
+    },
+    {
+      "id": 16,
+      "type": "off_topic",
+      "question": "מה המתכון לעוגת שוקולד?",
+      "expected": "לא מצאתי מידע על כך בהודעות.",
+      "search_query": "מתכון לעוגת שוקולד",
+      "answer": "לא מצאתי מידע על כך בהודעות.",
+      "correct": null,
+      "reason": "Judge error: ClientError",
+      "recall": null,
+      "mrr": null,
+      "llm_called": false,
+      "tokens": {
+        "llm_prompt": 316,
+        "llm_completion": 8,
+        "embedding": 17
+      },
+      "sent_ids": [],
+      "cited": []
+    },
+    {
+      "id": 20,
+      "type": "change",
+      "question": "האם מישהי יודעת מתי המבחן באנגלית?",
+      "expected": "יום שני 9.11, בשעה השנייה. נדחה מיום חמישי 5.11.",
+      "search_query": "מבחן אנגלית",
+      "answer": "המבחן באנגלית יתקיים ביום שני 9.11, באותה שעה (השעה השנייה). כך עולה מעדכון של יעל אברהם מיום חמישי 29.10.2026, שבו צוין שהמבחן נדחה מהתאריך המקורי (5.11).",
+      "correct": null,
+      "reason": "Judge error: ClientError",
+      "recall": 1.0,
+      "mrr": 0.25,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1506,
+        "llm_completion": 99,
+        "embedding": 12
+      },
+      "sent_ids": [
+        "<sample-03@sample.test>",
+        "<sample-04@sample.test>",
+        "<sample-05@sample.test>",
+        "<sample-06@sample.test>",
+        "<sample-12@sample.test>",
+        "<sample-25@sample.test>"
+      ],
+      "cited": [
+        "<sample-03@sample.test>",
+        "<sample-12@sample.test>"
+      ]
+    },
+    {
+      "id": 22,
+      "type": "contradiction",
+      "question": "המבחן במדעים ב-15 או ב-16?",
+      "expected": "סתירה: לפי אביגיל ביום ראשון 15.11, לפי מיכל ביום שני 16.11. המידע מתלמידות — כדאי לוודא.",
+      "search_query": "מבחן במדעים 15 או 16",
+      "answer": "לפי ההודעות, ישנן שתי גרסאות שונות לגבי מועד המבחן במדעים (מכיוון שהמידע הגיע מתלמידות, כדאי לוודא מול גורם רשמי):\n* אביגיל גולד כתבה ביום שני 2.11.2026 ששמעה שהמבחן ביום ראשון 15.11.2026.\n* מיכל רוזן כתבה ביום שלישי 3.11.2026 שהמורה אמרה לה שהמבחן ביום שני 16.11.2026.",
+      "correct": null,
+      "reason": "Judge error: ClientError",
+      "recall": 1.0,
+      "mrr": 1.0,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1212,
+        "llm_completion": 173,
+        "embedding": 17
+      },
+      "sent_ids": [
+        "<sample-04@sample.test>",
+        "<sample-21@sample.test>",
+        "<sample-22@sample.test>"
+      ],
+      "cited": [
+        "<sample-21@sample.test>",
+        "<sample-22@sample.test>"
+      ]
+    },
+    {
+      "id": 23,
+      "type": "contradiction",
+      "question": "יוצאים לטיול ב-7:30 או ב-8:00?",
+      "expected": "סתירה: לפי מיכל ב-7:30 מחניית בית הספר, לפי נועה ב-8:00 מהשער הראשי. המידע מתלמידות — כדאי לוודא.",
+      "search_query": "שעת יציאה לטיול",
+      "answer": "קיימת סתירה בין התלמידות לגבי שעת היציאה לטיול:\n- מיכל רוזן כתבה ביום ראשון 1.11.2026 שהיציאה היא ב-7:30 מחניית בית הספר.\n- נועה לוי כתבה ביום שני 2.11.2026 שהיציאה היא ב-8:00 מהשער הראשי.\n\nמכיוון שהמידע הגיע מתלמידות וללא עדכון רשמי ביניהן, כדאי לוודא את השעה המדויקת.",
+      "correct": null,
+      "reason": "Judge error: ClientError",
+      "recall": 1.0,
+      "mrr": 0.5,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1335,
+        "llm_completion": 158,
+        "embedding": 16
+      },
+      "sent_ids": [
+        "<sample-07@sample.test>",
+        "<sample-16@sample.test>",
+        "<sample-26@sample.test>"
+      ],
+      "cited": [
+        "<sample-16@sample.test>",
+        "<sample-26@sample.test>"
+      ]
+    },
+    {
+      "id": 26,
+      "type": "no_info",
+      "question": "מישהי יודעת אם יש מבחן בספרות?",
+      "expected": "לא מצאתי מידע על כך בהודעות.",
+      "search_query": "מבחן בספרות",
+      "answer": "לא מצאתי מידע על כך בהודעות.",
+      "correct": null,
+      "reason": "Judge error: ClientError",
+      "recall": null,
+      "mrr": null,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1179,
+        "llm_completion": 24,
+        "embedding": 13
+      },
+      "sent_ids": [
+        "<sample-03@sample.test>",
+        "<sample-04@sample.test>",
+        "<sample-25@sample.test>"
+      ],
+      "cited": []
+    },
+    {
+      "id": 28,
+      "type": "follow_up",
+      "question": "ומתי הוא?",
+      "expected": "המבחן באנגלית ביום שני 9.11, בשעה השנייה (נדחה מיום חמישי 5.11).",
+      "search_query": "מתי המבחן באנגלית?",
+      "answer": "לפי הודעה של יעל אברהם מיום חמישי 29.10.2026, המבחן באנגלית נדחה ויתקיים ביום שני 9.11.2026, בשעה השנייה. החומר למבחן הוא יחידות 3 ו-4 בספר, וכן הסיפור שנקרא בכיתה. לגבי קיומו של שיעור רגיל באותו יום, צוין שאין מידע על כך.",
+      "correct": null,
+      "reason": "Judge error: ClientError",
+      "recall": 1.0,
+      "mrr": 0.333,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1960,
+        "llm_completion": 137,
+        "embedding": 18
+      },
+      "sent_ids": [
+        "<sample-03@sample.test>",
+        "<sample-04@sample.test>",
+        "<sample-05@sample.test>",
+        "<sample-06@sample.test>",
+        "<sample-12@sample.test>",
+        "<sample-13@sample.test>",
+        "<sample-14@sample.test>",
+        "<sample-21@sample.test>",
+        "<sample-22@sample.test>",
+        "<sample-25@sample.test>"
+      ],
+      "cited": [
+        "<sample-03@sample.test>",
+        "<sample-05@sample.test>",
+        "<sample-12@sample.test>",
+        "<sample-14@sample.test>"
+      ]
+    }
+  ]
+}

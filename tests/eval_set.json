@@ -163,6 +163,20 @@
       "question": "מישהי יודעת כמה צריך לשלם על הטיול?",
       "expected": "עוד לא ידוע — על התשלום עוד לא אמרו.",
       "relevant_ids": ["<sample-16@sample.test>"]
+    },
+    {
+      "id": 28, "type": "follow_up", "split": "tune", "style": "natural",
+      "history": [{"question": "מה החומר למבחן באנגלית?", "answer": "יחידות 3 ו-4 בספר, וגם הסיפור שקראו בכיתה."}],
+      "question": "ומתי הוא?",
+      "expected": "המבחן באנגלית ביום שני 9.11, בשעה השנייה (נדחה מיום חמישי 5.11).",
+      "relevant_ids": ["<sample-12@sample.test>"]
+    },
+    {
+      "id": 29, "type": "follow_up", "split": "test", "style": "natural",
+      "history": [{"question": "יש מבחן בהיסטוריה ב-10.11?", "answer": "לא, המבחן בוטל. במקומו מגישים עבודה על המהפכה הצרפתית עד יום שלישי 17.11."}],
+      "question": "ומה צריך לכתוב בה?",
+      "expected": "עבודה על המהפכה הצרפתית. ההנחיות המפורטות עוד לא נשלחו (\"יגיעו בהמשך\").",
+      "relevant_ids": ["<sample-19@sample.test>"]
     }
   ]
 }
