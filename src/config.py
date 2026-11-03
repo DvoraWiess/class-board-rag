@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 from llama_index.core import Settings
@@ -8,6 +9,10 @@ load_dotenv()
 
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini").strip().lower()
 TIMEZONE = "Asia/Jerusalem"
+
+# Paths: נתיבים יחסית לשורש הפרויקט, כדי שיעבדו מכל תיקייה שממנה מריצים
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+EMAILS_DIR = PROJECT_ROOT / "data" / "emails"
 
 # Why: טמפרטורה 0 — אנחנו רוצים תשובות עובדתיות ועקביות, לא יצירתיות
 LLM_TEMPERATURE = 0.0

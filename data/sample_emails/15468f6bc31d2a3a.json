@@ -1,0 +1,8 @@
+{
+  "message_id": "<sample-20@sample.test>",
+  "date": "2026-11-03T11:30:00+02:00",
+  "subject": "שיעורי בית במדעים",
+  "from": "לאה רוזן (מדעים) <lea.rosen@example.com>",
+  "body": "<div dir=\"rtl\"><p>שיעורי בית: לסכם את פרק 2 בספר (התא).</p><p>הגשה ביום ראשון <u>8.11</u>.</p></div>",
+  "body_type": "html"
+}

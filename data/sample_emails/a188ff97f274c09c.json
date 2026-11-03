@@ -1,0 +1,8 @@
+{
+  "message_id": "<sample-15@sample.test>",
+  "date": "2026-11-01T17:10:00+02:00",
+  "subject": "דף עבודה 7",
+  "from": "שירה <shira.student@example.com>",
+  "body": "מישהי יכולה לשלוח צילום של דף עבודה 7? לא הייתי בשיעור",
+  "body_type": "text"
+}

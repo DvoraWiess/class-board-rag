@@ -1,8 +1,10 @@
 # Secrets: מפתחות וסיסמאות — לעולם לא עולים ל-Git
 .env
 
-# Personal data: המיילים והאינדקס
-data/
+# Personal data: המיילים האמיתיים והאינדקס
+# Note: מיילי הדוגמה (מומצאים) כן עולים, כדי שאפשר יהיה להריץ את המערכת בלי מידע אישי
+data/*
+!data/sample_emails/
 chroma_db/
 
 # Python

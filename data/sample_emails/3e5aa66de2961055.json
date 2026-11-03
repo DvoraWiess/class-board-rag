@@ -1,0 +1,8 @@
+{
+  "message_id": "<sample-16@sample.test>",
+  "date": "2026-11-01T18:00:00+02:00",
+  "subject": "תודה",
+  "from": "נועה <noa.student@example.com>",
+  "body": "תודה למרים על שיעור החזרה ביום רביעי, עזר מאוד!",
+  "body_type": "text"
+}

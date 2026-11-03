@@ -1,0 +1,8 @@
+{
+  "message_id": "<sample-10@sample.test>",
+  "date": "2026-10-28T13:20:00+02:00",
+  "subject": "אסיפת הורים",
+  "from": "רחל לוי (מחנכת) <rachel.levi@example.com>",
+  "body": "<html><body><p>הורים יקרים,</p><p>אסיפת ההורים תתקיים ביום <b>רביעי 4.11</b> בשעה <b>18:00</b> באולם בית הספר.</p><p>בברכה,<br>רחל לוי</p></body></html>",
+  "body_type": "html"
+}
