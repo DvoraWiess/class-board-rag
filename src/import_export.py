@@ -7,7 +7,7 @@ from email.utils import parseaddr
 from pathlib import Path
 
 from src.config import EMAILS_DIR
-from src.fetch_emails import email_filename, parse_message, save_email
+from src.messages import email_filename, parse_message, save_email
 
 
 def read_raw_messages(path):

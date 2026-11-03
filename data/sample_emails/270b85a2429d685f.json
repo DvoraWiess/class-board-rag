@@ -1,8 +1,9 @@
 {
   "message_id": "<sample-21@sample.test>",
-  "date": "2026-11-03T20:15:00+02:00",
-  "subject": "בהצלחה",
-  "from": "תמר <tamar.student@example.com>",
-  "body": "בהצלחה לכולן במבחן באנגלית! 💪",
+  "date": "2026-11-02T21:00:00+02:00",
+  "subject": "מבחן במדעים",
+  "from": "אביגיל גולד <avigail.gold@example.com>",
+  "in_reply_to": null,
+  "body": "שמעתי שהמבחן במדעים ביום ראשון 15.11.",
   "body_type": "text"
 }

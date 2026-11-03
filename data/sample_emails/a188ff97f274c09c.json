@@ -1,8 +1,9 @@
 {
   "message_id": "<sample-15@sample.test>",
-  "date": "2026-11-01T17:10:00+02:00",
-  "subject": "דף עבודה 7",
-  "from": "שירה <shira.student@example.com>",
-  "body": "מישהי יכולה לשלוח צילום של דף עבודה 7? לא הייתי בשיעור",
+  "date": "2026-10-30T12:45:00+02:00",
+  "subject": "דף עבודה 7 במתמטיקה",
+  "from": "אביגיל גולד <avigail.gold@example.com>",
+  "in_reply_to": null,
+  "body": "שיעורי בית: דף עבודה 7 (חילקו בכיתה). להגיש ביום רביעי 4.11.",
   "body_type": "text"
 }

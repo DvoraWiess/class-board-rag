@@ -1,0 +1,9 @@
+{
+  "message_id": "<sample-22@sample.test>",
+  "date": "2026-11-03T07:50:00+02:00",
+  "subject": "Re: מבחן במדעים",
+  "from": "מיכל רוזן <michal.rosen@example.com>",
+  "in_reply_to": "<sample-21@sample.test>",
+  "body": "לא, המורה אמרה לי שהוא ביום שני 16.11.",
+  "body_type": "text"
+}

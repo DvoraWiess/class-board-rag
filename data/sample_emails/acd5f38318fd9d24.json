@@ -2,7 +2,8 @@
   "message_id": "<sample-02@sample.test>",
   "date": "2026-10-18T14:10:00+03:00",
   "subject": "שיעורי בית במתמטיקה",
-  "from": "מרים כהן (מתמטיקה) <miriam.cohen@example.com>",
-  "body": "שיעורי בית: עמוד 45, תרגילים 1-10.\nהגשה ביום ראשון 25.10.\n\n--\nמרים כהן\nמורה למתמטיקה",
+  "from": "תמר כהן <tamar.cohen@example.com>",
+  "in_reply_to": null,
+  "body": "המורה למתמטיקה אמרה: עמוד 45, תרגילים 1-10. להגיש ביום ראשון 25.10.\n\nנשלח מה-iPhone שלי",
   "body_type": "text"
 }

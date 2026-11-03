@@ -1,0 +1,9 @@
+{
+  "message_id": "<sample-24@sample.test>",
+  "date": "2026-11-03T12:00:00+02:00",
+  "subject": "יום קצר מחר",
+  "from": "תמר כהן <tamar.cohen@example.com>",
+  "in_reply_to": null,
+  "body": "בגלל אסיפת ההורים, מחר (רביעי 4.11) מסיימים ב-12:30.",
+  "body_type": "text"
+}

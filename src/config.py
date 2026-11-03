@@ -13,6 +13,7 @@ TIMEZONE = "Asia/Jerusalem"
 # Paths: נתיבים יחסית לשורש הפרויקט, כדי שיעבדו מכל תיקייה שממנה מריצים
 PROJECT_ROOT = Path(__file__).resolve().parent.parent
 EMAILS_DIR = PROJECT_ROOT / "data" / "emails"
+SAMPLE_EMAILS_DIR = PROJECT_ROOT / "data" / "sample_emails"
 
 # Why: טמפרטורה 0 — אנחנו רוצים תשובות עובדתיות ועקביות, לא יצירתיות
 LLM_TEMPERATURE = 0.0

@@ -1,8 +1,9 @@
 {
   "message_id": "<sample-20@sample.test>",
-  "date": "2026-11-03T11:30:00+02:00",
-  "subject": "שיעורי בית במדעים",
-  "from": "לאה רוזן (מדעים) <lea.rosen@example.com>",
-  "body": "<div dir=\"rtl\"><p>שיעורי בית: לסכם את פרק 2 בספר (התא).</p><p>הגשה ביום ראשון <u>8.11</u>.</p></div>",
-  "body_type": "html"
+  "date": "2026-11-02T15:00:00+02:00",
+  "subject": "מחר מתחילים מאוחר",
+  "from": "נועה לוי <noa.levi@example.com>",
+  "in_reply_to": null,
+  "body": "מחר, יום שלישי 3.11, אין שיעור ראשון. מתחילים ב-9:00.",
+  "body_type": "text"
 }

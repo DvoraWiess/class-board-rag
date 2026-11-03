@@ -2,7 +2,8 @@
   "message_id": "<sample-04@sample.test>",
   "date": "2026-10-21T19:42:00+03:00",
   "subject": "שאלה על המבחן באנגלית",
-  "from": "נועה <noa.student@example.com>",
+  "from": "שירה פרידמן <shira.friedman@example.com>",
+  "in_reply_to": null,
   "body": "מישהי יודעת אם המבחן באנגלית כולל גם את הסיפור שקראנו בכיתה?",
   "body_type": "text"
 }
