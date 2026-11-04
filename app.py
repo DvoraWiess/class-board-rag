@@ -74,7 +74,8 @@ def questions_tab(state):
     st.chat_message("user").markdown(question)
     with st.chat_message("assistant"):
         try:
-            stream, nodes, search_query = ask_stream(question, state["counter"], history, state["index"])
+            with st.spinner("מחפש בהודעות..."):
+                stream, nodes, search_query = ask_stream(question, state["counter"], history, state["index"])
             if stream is None:
                 st.markdown(NO_INFO_ANSWER)
                 answer = Answer(NO_INFO_ANSWER, tokens=token_summary(state["counter"]), search_query=search_query)

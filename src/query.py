@@ -135,6 +135,11 @@ def retrieve(index, bundle, top_k, cutoff, penalty, now):
     filters = MetadataFilters(filters=[MetadataFilter(key="date_ts", value=int(now.timestamp()),
                                                       operator=FilterOperator.LTE)]) if now else None
     nodes = index.as_retriever(similarity_top_k=top_k, filters=filters).retrieve(bundle)
+    # Why: הודעה שנמחקה מתהליך אחר עלולה לחזור מהמטמון של Chroma בלי metadata — מדלגים במקום לקרוס (#21)
+    stale = [n for n in nodes if "message_id" not in n.node.metadata]
+    if stale:
+        print(f"Warning: {len(stale)} רשומות בלי message_id באינדקס (מטמון ישן?) — דילגנו. מומלץ: --rebuild")
+        nodes = [n for n in nodes if "message_id" in n.node.metadata]
     for node in nodes:
         if node.node.metadata.get("has_info") is False:
             node.score *= penalty  # Why: שאלות ותודות "גונבות" מקום מהודעות עם מידע (#8)
