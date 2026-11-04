@@ -177,6 +177,78 @@
       "question": "ומה צריך לכתוב בה?",
       "expected": "עבודה על המהפכה הצרפתית. ההנחיות המפורטות עוד לא נשלחו (\"יגיעו בהמשך\").",
       "relevant_ids": ["<sample-19@sample.test>"]
+    },
+    {
+      "id": 30, "type": "simple", "split": "tune", "style": "natural",
+      "question": "עד מתי מגישים את דף עבודה 7?",
+      "expected": "עד יום רביעי 4.11.",
+      "relevant_ids": ["<sample-15@sample.test>"]
+    },
+    {
+      "id": 31, "type": "simple", "split": "test", "style": "formal",
+      "question": "מה צריך לקרוא בתנ\"ך?",
+      "expected": "שמואל א' פרק ט\"ז, ולענות על שאלות 1-4 בדף. להגיש ביום ראשון 1.11.",
+      "relevant_ids": ["<sample-08@sample.test>"]
+    },
+    {
+      "id": 32, "type": "simple", "split": "test", "style": "natural",
+      "question": "בערך מתי חוזרים מהטיול?",
+      "expected": "בערך ב-17:00.",
+      "relevant_ids": ["<sample-16@sample.test>"]
+    },
+    {
+      "id": 33, "type": "simple", "split": "tune", "style": "formal",
+      "question": "אילו שיעורים יש ביום שלישי לפי המערכת הקבועה?",
+      "expected": "מתמטיקה, תנ\"ך, אנגלית.",
+      "relevant_ids": ["<sample-01@sample.test>"]
+    },
+    {
+      "id": 34, "type": "simple", "split": "test", "style": "formal",
+      "question": "איפה תתקיים אסיפת ההורים?",
+      "expected": "באולם בית הספר (יום רביעי 4.11, 18:00).",
+      "relevant_ids": ["<sample-11@sample.test>"]
+    },
+    {
+      "id": 35, "type": "thread", "split": "tune", "style": "natural",
+      "question": "המבחן באנגלית כולל גם את הסיפור?",
+      "expected": "כן, לפי יעל — גם הסיפור שקראו בכיתה.",
+      "relevant_ids": ["<sample-05@sample.test>"]
+    },
+    {
+      "id": 36, "type": "no_info", "split": "tune", "style": "formal",
+      "question": "מתי המבחן במתמטיקה?",
+      "expected": "לא מצאתי מידע על כך בהודעות.",
+      "relevant_ids": []
+    },
+    {
+      "id": 37, "type": "no_info", "split": "test", "style": "natural",
+      "question": "מה השם של המחנכת?",
+      "expected": "לא מצאתי מידע על כך בהודעות.",
+      "relevant_ids": []
+    },
+    {
+      "id": 38, "type": "off_topic", "split": "tune", "style": "natural",
+      "question": "מה מזג האוויר מחר?",
+      "expected": "לא מצאתי מידע על כך בהודעות.",
+      "relevant_ids": []
+    },
+    {
+      "id": 39, "type": "off_topic", "split": "test", "style": "formal",
+      "question": "כמה זה 15 כפול 4?",
+      "expected": "לא מצאתי מידע על כך בהודעות. (אסור לענות 60 מהידע הכללי.)",
+      "relevant_ids": []
+    },
+    {
+      "id": 40, "type": "off_topic", "split": "tune", "style": "formal",
+      "question": "מי כתב את ספרי הארי פוטר?",
+      "expected": "לא מצאתי מידע על כך בהודעות.",
+      "relevant_ids": []
+    },
+    {
+      "id": 41, "type": "off_topic", "split": "test", "style": "natural",
+      "question": "איך מכינים פסטה?",
+      "expected": "לא מצאתי מידע על כך בהודעות.",
+      "relevant_ids": []
     }
   ]
 }
