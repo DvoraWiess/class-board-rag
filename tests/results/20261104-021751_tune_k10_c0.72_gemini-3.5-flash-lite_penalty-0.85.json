@@ -1,0 +1,590 @@
+{
+  "settings": {
+    "split": "tune",
+    "top_k": 10,
+    "cutoff": 0.72,
+    "penalty": 0.85,
+    "llm": "gemini-3.5-flash-lite",
+    "judge": null,
+    "rewrite": true,
+    "asked_on": "2026-11-03T21:00:00+02:00",
+    "tag": "penalty-0.85"
+  },
+  "summary": {
+    "questions": 15,
+    "not_judged": 15,
+    "accuracy": null,
+    "recall_at_k": 1.0,
+    "mrr": 0.833,
+    "llm_calls": 14,
+    "avg_llm_tokens_real": 1721.2,
+    "avg_embedding_tokens_estimate": 21.8,
+    "avg_seconds": {
+      "rewrite": 1.051,
+      "embedding": 0.732,
+      "search": 0.041,
+      "llm": 0.984,
+      "total": 2.809
+    }
+  },
+  "results": [
+    {
+      "id": 1,
+      "type": "change",
+      "question": "מתי המבחן באנגלית?",
+      "expected": "יום שני 9.11, בשעה השנייה. נדחה מיום חמישי 5.11.",
+      "search_query": "מתי המבחן באנגלית?",
+      "answer": "המבחן באנגלית נדחה ויהיה ביום שני 9.11.2026 (לפי הודעת עדכון מיום 29.10.2026).\nהחומר למבחן כולל את יחידות 3 ו-4 בספר וגם את הסיפור שקראנו בכיתה.",
+      "error": null,
+      "correct": null,
+      "reason": "",
+      "recall": 1.0,
+      "mrr": 0.5,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1790,
+        "llm_completion": 99,
+        "embedding": 18
+      },
+      "seconds": {
+        "rewrite": 2.08,
+        "embedding": 0.66,
+        "search": 0.17,
+        "llm": 0.75
+      },
+      "sent_ids": [
+        "<sample-03@sample.test>",
+        "<sample-04@sample.test>",
+        "<sample-05@sample.test>",
+        "<sample-12@sample.test>",
+        "<sample-13@sample.test>",
+        "<sample-14@sample.test>",
+        "<sample-21@sample.test>",
+        "<sample-22@sample.test>"
+      ],
+      "cited": [
+        "<sample-03@sample.test>",
+        "<sample-05@sample.test>",
+        "<sample-12@sample.test>"
+      ]
+    },
+    {
+      "id": 2,
+      "type": "thread",
+      "question": "מה החומר למבחן באנגלית?",
+      "expected": "יחידות 3 ו-4 בספר, וגם הסיפור שקראו בכיתה.",
+      "search_query": "מה החומר למבחן באנגלית?",
+      "answer": "החומר למבחן באנגלית כולל את יחידות 3 ו-4 בספר, וכן את הסיפור שקראנו בכיתה.",
+      "error": null,
+      "correct": null,
+      "reason": "",
+      "recall": 1.0,
+      "mrr": 1.0,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1779,
+        "llm_completion": 57,
+        "embedding": 22
+      },
+      "seconds": {
+        "rewrite": 0.71,
+        "embedding": 0.89,
+        "search": 0.03,
+        "llm": 0.67
+      },
+      "sent_ids": [
+        "<sample-03@sample.test>",
+        "<sample-04@sample.test>",
+        "<sample-05@sample.test>",
+        "<sample-10@sample.test>",
+        "<sample-12@sample.test>",
+        "<sample-13@sample.test>",
+        "<sample-14@sample.test>",
+        "<sample-21@sample.test>"
+      ],
+      "cited": [
+        "<sample-03@sample.test>",
+        "<sample-05@sample.test>",
+        "<sample-12@sample.test>"
+      ]
+    },
+    {
+      "id": 4,
+      "type": "change",
+      "question": "עד מתי צריך להגיש את העבודה בהיסטוריה?",
+      "expected": "עד יום שלישי 17.11.",
+      "search_query": "עד מתי צריך להגיש את העבודה בהיסטוריה?",
+      "answer": "את העבודה בהיסטוריה צריך להגיש עד יום שלישי 17.11.2026 (לפי הודעה מתאריך 2.11.2026, המבחן שתוכנן ל-10.11 בוטל ובמקומו ניתנה עבודה).",
+      "error": null,
+      "correct": null,
+      "reason": "",
+      "recall": 1.0,
+      "mrr": 1.0,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1382,
+        "llm_completion": 98,
+        "embedding": 35
+      },
+      "seconds": {
+        "rewrite": 0.89,
+        "embedding": 0.62,
+        "search": 0.03,
+        "llm": 0.88
+      },
+      "sent_ids": [
+        "<sample-02@sample.test>",
+        "<sample-10@sample.test>",
+        "<sample-15@sample.test>",
+        "<sample-19@sample.test>"
+      ],
+      "cited": [
+        "<sample-10@sample.test>",
+        "<sample-19@sample.test>"
+      ]
+    },
+    {
+      "id": 5,
+      "type": "contradiction",
+      "question": "מתי המבחן במדעים?",
+      "expected": "סתירה: לפי אביגיל ביום ראשון 15.11, לפי מיכל ביום שני 16.11. המידע מתלמידות — כדאי לוודא.",
+      "search_query": "מתי המבחן במדעים?",
+      "answer": "על פי ההודעות, ישנן שתי גרסאות שונות לגבי מועד המבחן במדעים (מידע שהגיע מתלמידות, ולכן כדאי לוודא):\n* אביגיל גולד כתבה ביום שני 2.11.2026 שהמבחן ביום ראשון 15.11.2026.\n* מיכל רוזן כתבה ביום שלישי 3.11.2026 שהמבחן ביום שני 16.11.2026.",
+      "error": null,
+      "correct": null,
+      "reason": "",
+      "recall": 1.0,
+      "mrr": 1.0,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1944,
+        "llm_completion": 148,
+        "embedding": 16
+      },
+      "seconds": {
+        "rewrite": 0.85,
+        "embedding": 0.72,
+        "search": 0.03,
+        "llm": 1.12
+      },
+      "sent_ids": [
+        "<sample-01@sample.test>",
+        "<sample-03@sample.test>",
+        "<sample-10@sample.test>",
+        "<sample-12@sample.test>",
+        "<sample-13@sample.test>",
+        "<sample-14@sample.test>",
+        "<sample-21@sample.test>",
+        "<sample-22@sample.test>",
+        "<sample-23@sample.test>"
+      ],
+      "cited": [
+        "<sample-21@sample.test>",
+        "<sample-22@sample.test>"
+      ]
+    },
+    {
+      "id": 6,
+      "type": "partial",
+      "question": "כמה עולה הטיול השנתי?",
+      "expected": "עוד לא ידוע — על התשלום עוד לא אמרו. (הטיול ביום חמישי 12.11.)",
+      "search_query": "כמה עולה הטיול השנתי?",
+      "answer": "לפי ההודעות, עדיין לא אמרו דבר על התשלום לטיול השנתי.",
+      "error": null,
+      "correct": null,
+      "reason": "",
+      "recall": 1.0,
+      "mrr": 0.5,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1353,
+        "llm_completion": 44,
+        "embedding": 21
+      },
+      "seconds": {
+        "rewrite": 1.01,
+        "embedding": 0.61,
+        "search": 0.02,
+        "llm": 0.8
+      },
+      "sent_ids": [
+        "<sample-07@sample.test>",
+        "<sample-16@sample.test>",
+        "<sample-26@sample.test>"
+      ],
+      "cited": [
+        "<sample-07@sample.test>",
+        "<sample-16@sample.test>"
+      ]
+    },
+    {
+      "id": 8,
+      "type": "relative_date",
+      "question": "מה יש מחר?",
+      "expected": "יום רביעי 4.11: יום קצר, מסיימים ב-12:30 בגלל אסיפת ההורים (האסיפה ב-18:00).",
+      "search_query": "מה יש מחר (יום רביעי 4.11.2026)?",
+      "answer": "מחר (יום רביעי, 4.11.2026):\n* יש אסיפת הורים בשעה 18:00 באולם בית הספר.\n* צריך להגיש את דף עבודה 7 במתמטיקה.\n* מסיימים ב-12:30 (בגלל אסיפת ההורים).\n* מבחינת המערכת הקבועה אמור להיות: ספורט, מדעים, היסטוריה (מתחילים ב-8:00), אך שימי לב שאין מידע על שינויים במערכת ליום זה בהודעות.",
+      "error": null,
+      "correct": null,
+      "reason": "",
+      "recall": 1.0,
+      "mrr": 1.0,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1850,
+        "llm_completion": 177,
+        "embedding": 26
+      },
+      "seconds": {
+        "rewrite": 0.8,
+        "embedding": 0.68,
+        "search": 0.02,
+        "llm": 1.55
+      },
+      "sent_ids": [
+        "<sample-01@sample.test>",
+        "<sample-03@sample.test>",
+        "<sample-07@sample.test>",
+        "<sample-09@sample.test>",
+        "<sample-10@sample.test>",
+        "<sample-11@sample.test>",
+        "<sample-15@sample.test>",
+        "<sample-20@sample.test>",
+        "<sample-24@sample.test>"
+      ],
+      "cited": [
+        "<sample-01@sample.test>",
+        "<sample-09@sample.test>",
+        "<sample-11@sample.test>",
+        "<sample-15@sample.test>",
+        "<sample-24@sample.test>"
+      ]
+    },
+    {
+      "id": 10,
+      "type": "simple",
+      "question": "מתי אסיפת ההורים?",
+      "expected": "יום רביעי 4.11 בשעה 18:00 באולם בית הספר.",
+      "search_query": "מתי אסיפת ההורים?",
+      "answer": "אסיפת ההורים תתקיים ביום רביעי, 4.11.2026, בשעה 18:00 באולם בית הספר.",
+      "error": null,
+      "correct": null,
+      "reason": "",
+      "recall": 1.0,
+      "mrr": 1.0,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1562,
+        "llm_completion": 53,
+        "embedding": 16
+      },
+      "seconds": {
+        "rewrite": 0.92,
+        "embedding": 0.66,
+        "search": 0.02,
+        "llm": 1.23
+      },
+      "sent_ids": [
+        "<sample-01@sample.test>",
+        "<sample-02@sample.test>",
+        "<sample-07@sample.test>",
+        "<sample-11@sample.test>",
+        "<sample-20@sample.test>",
+        "<sample-24@sample.test>"
+      ],
+      "cited": [
+        "<sample-11@sample.test>"
+      ]
+    },
+    {
+      "id": 12,
+      "type": "simple",
+      "question": "מה צריך לעשות בשיעורי הבית במדעים?",
+      "expected": "לסכם את פרק 2 בספר (התא), להגיש ביום ראשון 8.11.",
+      "search_query": "מה צריך לעשות בשיעורי הבית במדעים?",
+      "answer": "לסכם את פרק 2 בספר (התא), ולהגיש ביום ראשון 8.11.2026.",
+      "error": null,
+      "correct": null,
+      "reason": "",
+      "recall": 1.0,
+      "mrr": 1.0,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1416,
+        "llm_completion": 54,
+        "embedding": 30
+      },
+      "seconds": {
+        "rewrite": 0.9,
+        "embedding": 0.73,
+        "search": 0.04,
+        "llm": 1.18
+      },
+      "sent_ids": [
+        "<sample-02@sample.test>",
+        "<sample-08@sample.test>",
+        "<sample-15@sample.test>",
+        "<sample-21@sample.test>",
+        "<sample-23@sample.test>"
+      ],
+      "cited": [
+        "<sample-23@sample.test>"
+      ]
+    },
+    {
+      "id": 14,
+      "type": "no_info",
+      "question": "מתי המבחן בספרות?",
+      "expected": "לא מצאתי מידע על כך בהודעות.",
+      "search_query": "מתי המבחן בספרות?",
+      "answer": "לא מצאתי מידע על כך בהודעות.",
+      "error": null,
+      "correct": null,
+      "reason": "",
+      "recall": null,
+      "mrr": null,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1887,
+        "llm_completion": 27,
+        "embedding": 18
+      },
+      "seconds": {
+        "rewrite": 0.91,
+        "embedding": 0.66,
+        "search": 0.04,
+        "llm": 1.21
+      },
+      "sent_ids": [
+        "<sample-03@sample.test>",
+        "<sample-04@sample.test>",
+        "<sample-05@sample.test>",
+        "<sample-10@sample.test>",
+        "<sample-12@sample.test>",
+        "<sample-13@sample.test>",
+        "<sample-14@sample.test>",
+        "<sample-21@sample.test>",
+        "<sample-22@sample.test>"
+      ],
+      "cited": []
+    },
+    {
+      "id": 16,
+      "type": "off_topic",
+      "question": "מה המתכון לעוגת שוקולד?",
+      "expected": "לא מצאתי מידע על כך בהודעות.",
+      "search_query": "מה המתכון לעוגת שוקולד?",
+      "answer": "לא מצאתי מידע על כך בהודעות.",
+      "error": null,
+      "correct": null,
+      "reason": "",
+      "recall": null,
+      "mrr": null,
+      "llm_called": false,
+      "tokens": {
+        "llm_prompt": 373,
+        "llm_completion": 10,
+        "embedding": 21
+      },
+      "seconds": {
+        "rewrite": 1.25,
+        "embedding": 0.72,
+        "search": 0.03,
+        "llm": 0.0
+      },
+      "sent_ids": [],
+      "cited": []
+    },
+    {
+      "id": 20,
+      "type": "change",
+      "question": "האם מישהי יודעת מתי המבחן באנגלית?",
+      "expected": "יום שני 9.11, בשעה השנייה. נדחה מיום חמישי 5.11.",
+      "search_query": "המבחן באנגלית",
+      "answer": "על פי הודעה של יעל אברהם מיום 29.10.2026, המבחן באנגלית נדחה מיום חמישי 5.11 ליום שני 9.11, באותה שעה (השעה השנייה).",
+      "error": null,
+      "correct": null,
+      "reason": "",
+      "recall": 1.0,
+      "mrr": 0.5,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1641,
+        "llm_completion": 78,
+        "embedding": 14
+      },
+      "seconds": {
+        "rewrite": 0.8,
+        "embedding": 0.57,
+        "search": 0.06,
+        "llm": 0.94
+      },
+      "sent_ids": [
+        "<sample-03@sample.test>",
+        "<sample-04@sample.test>",
+        "<sample-05@sample.test>",
+        "<sample-12@sample.test>",
+        "<sample-13@sample.test>",
+        "<sample-14@sample.test>"
+      ],
+      "cited": [
+        "<sample-03@sample.test>",
+        "<sample-12@sample.test>"
+      ]
+    },
+    {
+      "id": 22,
+      "type": "contradiction",
+      "question": "המבחן במדעים ב-15 או ב-16?",
+      "expected": "סתירה: לפי אביגיל ביום ראשון 15.11, לפי מיכל ביום שני 16.11. המידע מתלמידות — כדאי לוודא.",
+      "search_query": "המבחן במדעים ב-15 או ב-16?",
+      "answer": "לפי הודעות התלמידות, יש סתירה לגבי מועד המבחן במדעים:\n* אביגיל גולד כתבה ביום שני 2.11.2026 שהמבחן ביום ראשון 15.11.2026.\n* מיכל רוזן כתבה ביום שלישי 3.11.2026 שהמבחן ביום שני 16.11.2026.\n\nמכיוון שהמידע הגיע מתלמידות וללא עדכון רשמי אחת של השנייה, כדאי לוודא מול המורה.",
+      "error": null,
+      "correct": null,
+      "reason": "",
+      "recall": 1.0,
+      "mrr": 1.0,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 2072,
+        "llm_completion": 173,
+        "embedding": 21
+      },
+      "seconds": {
+        "rewrite": 0.95,
+        "embedding": 0.68,
+        "search": 0.02,
+        "llm": 1.23
+      },
+      "sent_ids": [
+        "<sample-01@sample.test>",
+        "<sample-03@sample.test>",
+        "<sample-07@sample.test>",
+        "<sample-09@sample.test>",
+        "<sample-12@sample.test>",
+        "<sample-13@sample.test>",
+        "<sample-14@sample.test>",
+        "<sample-19@sample.test>",
+        "<sample-21@sample.test>",
+        "<sample-22@sample.test>"
+      ],
+      "cited": [
+        "<sample-21@sample.test>",
+        "<sample-22@sample.test>"
+      ]
+    },
+    {
+      "id": 23,
+      "type": "contradiction",
+      "question": "יוצאים לטיול ב-7:30 או ב-8:00?",
+      "expected": "סתירה: לפי מיכל ב-7:30 מחניית בית הספר, לפי נועה ב-8:00 מהשער הראשי. המידע מתלמידות — כדאי לוודא.",
+      "search_query": "האם יוצאים לטיול ב-7:30 או ב-8:00?",
+      "answer": "יש סתירה בין ההודעות לגבי שעת היציאה לטיול:\n- מיכל רוזן כתבה ביום ראשון 1.11.2026 שהיציאה ב-7:30 מחניית בית הספר.\n- נועה לוי כתבה ביום שני 2.11.2026 שהיציאה ב-8:00 מהשער הראשי.\n\nמכיוון שהמידע הגיע מתלמידות, כדאי לוודא מול גורם מוסמך.",
+      "error": null,
+      "correct": null,
+      "reason": "",
+      "recall": 1.0,
+      "mrr": 1.0,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1648,
+        "llm_completion": 159,
+        "embedding": 30
+      },
+      "seconds": {
+        "rewrite": 1.07,
+        "embedding": 1.48,
+        "search": 0.03,
+        "llm": 1.12
+      },
+      "sent_ids": [
+        "<sample-01@sample.test>",
+        "<sample-07@sample.test>",
+        "<sample-16@sample.test>",
+        "<sample-20@sample.test>",
+        "<sample-26@sample.test>"
+      ],
+      "cited": [
+        "<sample-16@sample.test>",
+        "<sample-26@sample.test>"
+      ]
+    },
+    {
+      "id": 26,
+      "type": "no_info",
+      "question": "מישהי יודעת אם יש מבחן בספרות?",
+      "expected": "לא מצאתי מידע על כך בהודעות.",
+      "search_query": "האם יש מבחן בספרות?",
+      "answer": "לא מצאתי מידע על כך בהודעות.",
+      "error": null,
+      "correct": null,
+      "reason": "",
+      "recall": null,
+      "mrr": null,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1931,
+        "llm_completion": 28,
+        "embedding": 21
+      },
+      "seconds": {
+        "rewrite": 1.72,
+        "embedding": 0.6,
+        "search": 0.04,
+        "llm": 1.2
+      },
+      "sent_ids": [
+        "<sample-03@sample.test>",
+        "<sample-04@sample.test>",
+        "<sample-05@sample.test>",
+        "<sample-10@sample.test>",
+        "<sample-12@sample.test>",
+        "<sample-13@sample.test>",
+        "<sample-14@sample.test>",
+        "<sample-19@sample.test>",
+        "<sample-21@sample.test>"
+      ],
+      "cited": []
+    },
+    {
+      "id": 28,
+      "type": "follow_up",
+      "question": "ומתי הוא?",
+      "expected": "המבחן באנגלית ביום שני 9.11, בשעה השנייה (נדחה מיום חמישי 5.11).",
+      "search_query": "מתי המבחן באנגלית?",
+      "answer": "המבחן באנגלית נקבע תחילה ליום חמישי 5.11.2026 בשעה השנייה, אך לפי עדכון של יעל אברהם מיום 29.10.2026, המבחן נדחה ליום שני 9.11.2026 באותה שעה (השעה השנייה). החומר למבחן כולל את יחידות 3 ו-4 בספר וגם את הסיפור שנקרא בכיתה.",
+      "error": null,
+      "correct": null,
+      "reason": "",
+      "recall": 1.0,
+      "mrr": 0.5,
+      "llm_called": true,
+      "tokens": {
+        "llm_prompt": 1850,
+        "llm_completion": 135,
+        "embedding": 18
+      },
+      "seconds": {
+        "rewrite": 0.91,
+        "embedding": 0.7,
+        "search": 0.04,
+        "llm": 0.88
+      },
+      "sent_ids": [
+        "<sample-03@sample.test>",
+        "<sample-04@sample.test>",
+        "<sample-05@sample.test>",
+        "<sample-12@sample.test>",
+        "<sample-13@sample.test>",
+        "<sample-14@sample.test>",
+        "<sample-21@sample.test>",
+        "<sample-22@sample.test>"
+      ],
+      "cited": [
+        "<sample-03@sample.test>",
+        "<sample-05@sample.test>",
+        "<sample-12@sample.test>"
+      ]
+    }
+  ]
+}

@@ -1,8 +1,9 @@
-# Run: python -m tests.evaluate --split tune [--top-k 10] [--cutoff 0.72] [--tag name]
+# Run: python -m tests.evaluate --split tune [--top-k 10] [--cutoff 0.72] [--llm MODEL] [--no-judge] [--tag name]
 import src  # noqa: F401  (Must: ראשון — מפעיל את truststore)
 
 import argparse
 import json
+import os
 import re
 import sys
 import time
@@ -10,11 +11,12 @@ from datetime import datetime
 
 from llama_index.core import Settings
 
-from src.config import PROJECT_ROOT, SIMILARITY_CUTOFF, TOP_K, judge_llm, setup_models
+from src.config import NO_INFO_PENALTY, PROJECT_ROOT, SIMILARITY_CUTOFF, TOP_K, judge_llm, setup_models
 from src.query import ask, attach_token_counter
 
 EVAL_SET_PATH = PROJECT_ROOT / "tests" / "eval_set.json"
 RESULTS_DIR = PROJECT_ROOT / "tests" / "results"
+STAGES = ["rewrite", "embedding", "search", "llm"]
 
 # Why: שיפוט מרוכז — קריאה אחת לשופט בכל ריצה. במסלול החינמי יש לשופט 20 בקשות ליום (יומן הבעיות #11)
 JUDGE_PROMPT = """אתה בודק תשובות של בוט שעונה על שאלות לפי הודעות של קבוצת תלמידות.
@@ -58,7 +60,7 @@ def parse_verdicts(raw, ids):
 
 def judge_all(judge_model, results):
     """Judge: מודל אחר מזה שכתב את התשובות שופט את כל התשובות בקריאה אחת."""
-    to_judge = [r for r in results if not r["answer"].startswith("ERROR")]
+    to_judge = [r for r in results if r["error"] is None]
     ids = [r["id"] for r in to_judge]
     items = "\n\n".join(ITEM_TEMPLATE.format(id=r["id"], question=r["question"], expected=r["expected"],
                                              actual=r["answer"]) for r in to_judge)
@@ -78,7 +80,23 @@ def retrieval_metrics(nodes, relevant_ids):
     ranked = [n.node.metadata["message_id"] for n in sorted(nodes, key=lambda n: n.score, reverse=True)]
     recall = sum(mid in ranked for mid in relevant_ids) / len(relevant_ids)
     rank = next((i for i, mid in enumerate(ranked, 1) if mid in relevant_ids), None)
-    return recall, (1 / rank if rank else 0.0)
+    return round(recall, 3), round(1 / rank if rank else 0.0, 3)
+
+
+def result_row(item, answer=None, nodes=(), error=None):
+    """Row: שורת תוצאה אחת. בשגיאה — answer=None והשאלה לא נשפטת."""
+    recall, mrr = retrieval_metrics(nodes, item["relevant_ids"]) if answer else (None, None)
+    return {
+        "id": item["id"], "type": item["type"], "question": item["question"], "expected": item["expected"],
+        "search_query": answer.search_query if answer else None,
+        "answer": answer.text if answer else f"ERROR: {error}", "error": error,
+        "correct": None, "reason": "", "recall": recall, "mrr": mrr,
+        "llm_called": answer.llm_called if answer else False,
+        "tokens": answer.tokens if answer else {"llm_prompt": 0, "llm_completion": 0, "embedding": 0},
+        "seconds": {k: round(v, 2) for k, v in answer.timings.items()} if answer else {},
+        "sent_ids": [n.node.metadata["message_id"] for n in nodes],
+        "cited": [s["message_id"] for s in answer.sources] if answer else [],
+    }
 
 
 def average(values):
@@ -87,8 +105,9 @@ def average(values):
 
 
 def summarize(results):
-    """Summary: אחוז תשובות נכונות, Recall@k, MRR וטוקנים ממוצעים. שאלות עם "?" לא נספרות בדיוק."""
+    """Summary: נכונות, Recall@k, MRR, טוקנים וזמן ממוצע לכל שלב. שאלות עם "?" לא נספרות בנכונות."""
     judged = [r["correct"] for r in results if r["correct"] is not None]
+    ok = [r for r in results if r["error"] is None]
     return {
         "questions": len(results),
         "not_judged": len(results) - len(judged),
@@ -97,8 +116,10 @@ def summarize(results):
         "mrr": average(r["mrr"] for r in results),
         "llm_calls": sum(r["llm_called"] for r in results),
         # Note: טוקני LLM — נתון אמיתי מ-Gemini; טוקני Embedding — הערכה (יומן הבעיות #9)
-        "avg_llm_tokens_real": average(r["tokens"]["llm_prompt"] + r["tokens"]["llm_completion"] for r in results),
-        "avg_embedding_tokens_estimate": average(r["tokens"]["embedding"] for r in results),
+        "avg_llm_tokens_real": average(r["tokens"]["llm_prompt"] + r["tokens"]["llm_completion"] for r in ok),
+        "avg_embedding_tokens_estimate": average(r["tokens"]["embedding"] for r in ok),
+        "avg_seconds": {stage: average(r["seconds"].get(stage) for r in ok) for stage in STAGES}
+                       | {"total": average(sum(r["seconds"].values()) for r in ok)},
     }
 
 
@@ -112,7 +133,7 @@ def write_markdown(path, settings, summary, results):
         mark = {True: "✓", False: "✗", None: "?"}[r["correct"]]
         answer = r["answer"].replace("\n", " ").replace("|", "/")
         lines.append(f"| {r['id']} | {r['type']} | {mark} | {r['recall']} | {r['mrr']} | {r['question']} | "
-                     f"{r.get('search_query') or ''} | {answer} | {r['reason']} |")
+                     f"{r['search_query'] or ''} | {answer} | {r['reason']} |")
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
@@ -121,8 +142,11 @@ def main():
     parser.add_argument("--split", choices=["tune", "test", "all"], default="tune", help="Split: איזו קבוצת שאלות")
     parser.add_argument("--top-k", type=int, default=TOP_K)
     parser.add_argument("--cutoff", type=float, default=SIMILARITY_CUTOFF)
+    parser.add_argument("--penalty", type=float, default=NO_INFO_PENALTY, help="Penalty: הורדת ציון להודעות בלי מידע")
+    parser.add_argument("--llm", help="LLM: מודל אחר לכתיבת התשובות (ניסוי lite מול flash)")
+    parser.add_argument("--no-rewrite", action="store_true", help="No rewrite: בלי ניסוח מחדש (להשוואה)")
+    parser.add_argument("--no-judge", action="store_true", help="No judge: רק מדדי אחזור וזמנים, בלי שופט")
     parser.add_argument("--tag", default="", help="Tag: שם קצר לניסוי, נכנס לשם הקובץ")
-    parser.add_argument("--no-rewrite", action="store_true", help="No rewrite: בלי ניסוח מחדש (להשוואה לפני/אחרי)")
     # Note: ל-lite יש 15 בקשות לדקה, וכל שאלה = 2 קריאות (ניסוח + תשובה) — לכן 9 שניות בין שאלות
     parser.add_argument("--pause", type=float, default=9.0, help="Pause: שניות בין שאלות (מגבלת בקשות)")
     args = parser.parse_args()
@@ -133,47 +157,44 @@ def main():
     items = [q for q in eval_set["questions"] if args.split == "all" or q["split"] == args.split]
     now = datetime.fromisoformat(eval_set["asked_on"])
 
+    if args.llm:
+        os.environ["GEMINI_LLM_MODEL"] = args.llm
     setup_models()
     counter = attach_token_counter()
-    judge_model = judge_llm(Settings.llm.model)
-    settings = {"split": args.split, "top_k": args.top_k, "cutoff": args.cutoff, "llm": Settings.llm.model,
-                "judge": judge_model.model, "rewrite": not args.no_rewrite, "asked_on": eval_set["asked_on"],
-                "tag": args.tag}
+    judge_model = None if args.no_judge else judge_llm(Settings.llm.model)
+    settings = {"split": args.split, "top_k": args.top_k, "cutoff": args.cutoff, "penalty": args.penalty,
+                "llm": Settings.llm.model,
+                "judge": judge_model.model if judge_model else None, "rewrite": not args.no_rewrite,
+                "asked_on": eval_set["asked_on"], "tag": args.tag}
     print(f"Settings: {settings}")
 
     results = []
     for item in items:
         # Note: שאלת המשך — השיחה הקודמת קבועה בקובץ, כדי שהבדיקה תהיה ניתנת לשחזור
         history = [(h["question"], h["answer"]) for h in item.get("history", [])]
-        try:
-            answer, nodes = ask(item["question"], counter, history=history, rewrite=not args.no_rewrite,
-                                top_k=args.top_k, cutoff=args.cutoff, now=now)
-        except Exception as error:
-            print(f"Q{item['id']:<3}ERROR  {type(error).__name__}: {str(error)[:80]}")
-            results.append({"id": item["id"], "type": item["type"], "question": item["question"],
-                            "expected": item["expected"], "answer": f"ERROR: {type(error).__name__}",
-                            "correct": None, "reason": "Answer error", "recall": None, "mrr": None,
-                            "llm_called": False, "tokens": {"llm_prompt": 0, "llm_completion": 0, "embedding": 0},
-                            "sent_ids": [], "cited": []})
-            continue
-        recall, mrr = retrieval_metrics(nodes, item["relevant_ids"])
-        results.append({
-            "id": item["id"], "type": item["type"], "question": item["question"], "expected": item["expected"],
-            "search_query": answer.search_query, "answer": answer.text, "correct": None, "reason": "",
-            "recall": None if recall is None else round(recall, 3), "mrr": None if mrr is None else round(mrr, 3),
-            "llm_called": answer.llm_called, "tokens": answer.tokens,
-            "sent_ids": [n.node.metadata["message_id"] for n in nodes],
-            "cited": [s["message_id"] for s in answer.sources],
-        })
-        print(f"Q{item['id']:<3}{item['type']:<14} recall={recall} mrr={mrr} | search: {answer.search_query}")
+        for attempt in (1, 2):
+            try:
+                answer, nodes = ask(item["question"], counter, history=history, rewrite=not args.no_rewrite,
+                                    top_k=args.top_k, cutoff=args.cutoff, penalty=args.penalty, now=now)
+                row = result_row(item, answer, nodes)
+                break
+            except Exception as error:
+                row = result_row(item, error=f"{type(error).__name__}: {str(error)[:80]}")
+                # Why: 429 של מגבלה לדקה (15 ל-lite) — מחכים חצי דקה ומנסים שוב פעם אחת
+                if "429" not in str(error) or attempt == 2:
+                    break
+                print(f"Q{item['id']}: מגבלת בקשות לדקה — מחכים 30 שניות")
+                time.sleep(30)
+        results.append(row)
+        print(f"Q{row['id']:<3}{row['type']:<14} recall={row['recall']} mrr={row['mrr']} "
+              f"sec={row['seconds']} | {row['search_query'] or row['answer']}")
         time.sleep(args.pause)
 
-    verdicts = judge_all(judge_model, results)
-    for r in results:
-        if r["id"] in verdicts:
-            r["correct"], r["reason"] = verdicts[r["id"]]
-        mark = {True: "OK", False: "WRONG", None: "?"}[r["correct"]]
-        print(f"Q{r['id']:<3}{mark:<6} {r['reason']}")
+    if judge_model:
+        verdicts = judge_all(judge_model, results)
+        for r in results:
+            r["correct"], r["reason"] = verdicts.get(r["id"], (None, "Answer error"))
+            print(f"Q{r['id']:<3}{ {True: 'OK', False: 'WRONG', None: '?'}[r['correct']]:<6} {r['reason']}")
 
     summary = summarize(results)
     print(f"Summary: {summary}")

@@ -1,8 +1,46 @@
 import argparse
+import email
+import hashlib
 import mailbox
+from email import policy
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
-from src.messages import parse_message, save_email
+from src.config import TIMEZONE
+from src.messages import save_email
+
+
+def parse_message(raw_bytes):
+    """Parse: ממיר מייל גולמי (bytes) למילון בפורמט האחיד, או None אם אין לו תאריך."""
+    msg = email.message_from_bytes(raw_bytes, policy=policy.default)
+    if msg["date"] is None or msg["date"].datetime is None:
+        print("Warning: מייל בלי תאריך — דילגנו עליו")
+        return None
+    date = msg["date"].datetime
+    if date.tzinfo is None:
+        # Note: תאריך בלי אזור זמן — מניחים שהוא בשעון ישראל
+        date = date.replace(tzinfo=ZoneInfo(TIMEZONE))
+    date = date.astimezone(ZoneInfo(TIMEZONE))
+    subject, sender = str(msg["subject"] or ""), str(msg["from"] or "")
+
+    message_id = str(msg["message-id"] or "").strip()
+    if not message_id:
+        # Why: מזהה יציב — אותו מייל תמיד יקבל אותו מזהה, ולכן לא ייווצרו כפילויות
+        stable_key = f"{sender}|{date.isoformat()}|{subject}"
+        message_id = "generated-" + hashlib.sha1(stable_key.encode("utf-8")).hexdigest()
+        print("Warning: מייל בלי Message-ID — נוצר מזהה מ-hash של שולח+תאריך+נושא")
+
+    # Note: עדיפות לטקסט רגיל; אם אין — HTML (clean.py ממיר אותו לטקסט באינדוקס)
+    part = msg.get_body(preferencelist=("plain", "html"))
+    return {
+        "message_id": message_id,
+        "date": date.isoformat(),
+        "subject": subject,
+        "from": sender,
+        "in_reply_to": str(msg["in-reply-to"] or "").strip() or None,
+        "body": part.get_content() if part else "",
+        "body_type": "html" if part and part.get_content_type() == "text/html" else "text",
+    }
 
 
 def read_raw_messages(path):
@@ -43,7 +81,6 @@ def main():
     parser = argparse.ArgumentParser(description="Import: ייבוא מיילים מקובץ .mbox / .eml או מתיקייה")
     parser.add_argument("path", type=Path, help="Path: קובץ .mbox / .eml, או תיקייה שמכילה אותם")
     args = parser.parse_args()
-
     total, saved, failed = import_file(args.path)
     print(f"Done: {total} מיילים בקובץ, {saved} חדשים נשמרו, {failed} לא נקראו")
 
