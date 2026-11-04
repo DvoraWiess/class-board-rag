@@ -31,7 +31,8 @@ QA_PROMPT = PromptTemplate(
     "1. ענה רק לפי ההודעות. אל תשתמש בידע כללי ואל תנחש. "
     "מקצוע יכול להופיע בשמות שונים (למשל חשבון = מתמטיקה, לשון = עברית) — זה אותו מקצוע.\n"
     "2. עדכון מפורש (\"נדחה\", \"בוטל\", \"במקום\") מחליף הודעה קודמת באותו נושא — "
-    "ענה לפי העדכון וציין את תאריכו.\n"
+    "ענה לפי העדכון וציין את תאריכו. לפני שאתה כותב שמשהו קורה בתאריך מסוים, בדוק אם הודעה מאוחרת יותר "
+    "דחתה או ביטלה אותו — אם כן, אל תכתוב אותו תחת התאריך הישן.\n"
     "3. סתירה (תלמידות אומרות דברים שונים, בלי שאחת מעדכנת את השנייה): הצג את כל הגרסאות, "
     "עם שם השולחת והתאריך של כל אחת, וציין שהמידע הגיע מתלמידות ולכן כדאי לוודא. "
     "סתירה = תשובות שונות לאותה שאלה על אותו יום (תאריך, שעה או מקום שונים). הודעות שמסכימות, "
@@ -130,7 +131,7 @@ def parent_nodes(vector_store, nodes):
 
 
 def retrieve(index, bundle, top_k, cutoff, penalty, now):
-    """Retrieve: חיפוש → הורדת ציון להודעות בלי מידע → סף → הודעות אב → מיון מהישנה לחדשה ומספור."""
+    """Retrieve: חיפוש → הורדת ציון להודעות בלי מידע → סף (על השאלה) → הודעות אב → מיון מהישנה לחדשה ומספור."""
     # Note: now (בהערכה) — רק הודעות שנכתבו עד "היום" הקבוע, כדי שהודעות חדשות לא ישנו תוצאות
     filters = MetadataFilters(filters=[MetadataFilter(key="date_ts", value=int(now.timestamp()),
                                                       operator=FilterOperator.LTE)]) if now else None
@@ -143,7 +144,10 @@ def retrieve(index, bundle, top_k, cutoff, penalty, now):
     for node in nodes:
         if node.node.metadata.get("has_info") is False:
             node.score *= penalty  # Why: שאלות ותודות "גונבות" מקום מהודעות עם מידע (#8)
-    nodes = SimilarityPostprocessor(similarity_cutoff=cutoff).postprocess_nodes(nodes)  # (#5)
+    # Why: הסף מחליט רק אם לקרוא ל-LLM (אף הודעה לא מעל הסף → "לא מצאתי", #5) — לא אילו הודעות יגיעו אליו.
+    # Why: סינון כל הודעה בנפרד הפיל עדכון ("נדחה") שקצת פחות דומה לשאלה מההודעה המקורית (#22)
+    if not SimilarityPostprocessor(similarity_cutoff=cutoff).postprocess_nodes(nodes):
+        return []
     nodes += parent_nodes(index.vector_store, nodes)
     # Why: מהישנה לחדשה — ה-LLM רואה איך המידע השתנה (עדכון אחרי המקור, #6)
     nodes.sort(key=lambda n: n.node.metadata["date_ts"])
