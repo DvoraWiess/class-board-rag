@@ -84,3 +84,12 @@
 - New rule (CLAUDE.md #8): never read files outside the project without asking.
 - Next: judged runs (when the judge quota resets) → experiments on tune → one final test run.
   Before the defense: explain query.py sources + streaming code line by line.
+
+## Stage 7 — done (2026-11-04)
+- Final settings: top_k=10, cutoff 0.72, penalty 0.95, `gemini-3.5-flash-lite` (flash comparison dropped).
+- Eval set: 43 questions (22 tune / 21 test). Final tune run (no judge): Recall 1.0, MRR 0.812.
+- **Submission score — one judged test run:** 19/21 = 90.5% correct, Recall 1.0, MRR 0.76, 1,393 LLM tokens/question.
+  Wrong: #43 (synonym מתמטיקה/חשבון at the generation step — problem 19), #29 (borderline follow-up).
+- Prompt injection retested on the final code — passed.
+- Docs done: README, docs/architecture.md, docs/decisions.md, docs/summary_for_me.md, tests/questions.md.
+- Open: see docs/summary_for_me.md section 8.
