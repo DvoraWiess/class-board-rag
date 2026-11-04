@@ -15,7 +15,7 @@
   `seed_samples()` (copies samples to `data/emails/` when it is empty).
 - Format: message_id, date, subject, from, in_reply_to, body, body_type.
 - `src/import_export.py`: optional import, recursive, `--dry-run`, `--group`.
-- `fetch_emails.py` deleted (kept in commit `e34ceba`). Gmail vars removed from `.env.example`.
+- `fetch_emails.py` deleted (kept in commit `6f423b5`). Gmail vars removed from `.env.example`.
 - Samples: 25 invented student messages (`tests/make_sample_emails.py`), in Git; see `data/sample_emails/README.md`.
   Cases: update, cancel, partial, contradiction (#21/#22), threads, HTML, quote, iPhone signature.
 - Docs: CLAUDE.md, README.md (sample-data warning, IMAP history), problems_log #3.
