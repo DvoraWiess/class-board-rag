@@ -1,3 +1,6 @@
+# Run: python -m tests.inspect_retrieval "שאלה" [--top-k 10]  — כלי דיבאג (שלב 4): מה נשלף ובאיזה ציון, בלי LLM
+import src  # noqa: F401  (Must: ראשון — מפעיל את truststore)
+
 import argparse
 import math
 import sys

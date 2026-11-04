@@ -4,13 +4,12 @@ import sys
 import time
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Any, Optional
+from typing import Optional
 from zoneinfo import ZoneInfo
 
-from llama_index.core import PromptTemplate, QueryBundle, Settings
+from llama_index.core import PromptTemplate, QueryBundle, Settings, get_response_synthesizer
 from llama_index.core.callbacks import CallbackManager, TokenCountingHandler
 from llama_index.core.postprocessor import SimilarityPostprocessor
-from llama_index.core.postprocessor.types import BaseNodePostprocessor
 from llama_index.core.schema import NodeWithScore
 from llama_index.core.vector_stores import FilterOperator, MetadataFilter, MetadataFilters
 
@@ -18,9 +17,6 @@ from src.config import NO_INFO_PENALTY, SIMILARITY_CUTOFF, TIMEZONE, TOP_K, setu
 from src.indexer import open_index, readable_date
 
 NO_INFO_ANSWER = "לא מצאתי מידע על כך בהודעות."
-SNIPPET_CHARS = 120
-HISTORY_ANSWER_CHARS = 300
-
 # Note: כל הודעה בתגית עם מספר — כדי שה-LLM יוכל לציין מקורות, ולהפריד תוכן מהוראות
 MESSAGE_TEMPLATE = '<message number="{number}">\n{metadata_str}\n\n{content}\n</message>'
 
@@ -51,7 +47,7 @@ QA_PROMPT = PromptTemplate(
     "תשובה:"
 )
 
-# Why: ניסוח מחדש לפני החיפוש — מסיר פתיחות ("מישהי יודעת...", בעיה #8) ומשלים שאלות המשך (בעיה #14)
+# Why: ניסוח מחדש לפני החיפוש — מסיר פתיחות ("מישהי יודעת...", #8) ומשלים שאלות המשך (#14)
 REWRITE_PROMPT = (
     "אתה מנסח מחדש שאלות של תלמידות, לפני חיפוש בלוח ההודעות של הכיתה.\n"
     "היום: {today}.\n"
@@ -74,67 +70,6 @@ REWRITE_PROMPT = (
 SOURCES_LINE = re.compile(r"\n?[ \t]*\**מקורות:\**\s*(.*?)\s*$")
 
 
-class ChronologicalNumbering(BaseNodePostprocessor):
-    """Sort: ממיין מהישנה לחדשה וממספר כל הודעה בתגית <message number="N">.
-
-    Why: FixedRecencyPostprocessor המוכן ממיין מהחדשה לישנה, משאיר רק אחת, ודורש pandas (יומן הבעיות #6).
-    """
-
-    @classmethod
-    def class_name(cls) -> str:
-        return "ChronologicalNumbering"
-
-    def _postprocess_nodes(self, nodes, query_bundle=None):
-        nodes = sorted(nodes, key=lambda n: n.node.metadata["date_ts"])
-        for number, node in enumerate(nodes, 1):
-            node.node.text_template = MESSAGE_TEMPLATE.replace("{number}", str(number))
-        return nodes
-
-
-class NoInfoPenalty(BaseNodePostprocessor):
-    """Penalty: מכפיל את הציון של הודעות בלי מידע (has_info=False) — לפני הסף (יומן הבעיות #8)."""
-
-    factor: float = 1.0
-
-    @classmethod
-    def class_name(cls) -> str:
-        return "NoInfoPenalty"
-
-    def _postprocess_nodes(self, nodes, query_bundle=None):
-        for node in nodes:
-            if node.node.metadata.get("has_info") is False:
-                node.score *= self.factor
-        return sorted(nodes, key=lambda n: n.score, reverse=True)
-
-
-class ParentExpansion(BaseNodePostprocessor):
-    """Parent: לכל תגובה שנשלפה — מוסיף את ההודעה שעליה ענו, גם מתחת לסף. אב ישיר אחד, בלי כפילויות.
-
-    Why: Parent-child retrieval (החוברת, פרק 4; יומן הבעיות #12).
-    """
-
-    vector_store: Any = None
-
-    @classmethod
-    def class_name(cls) -> str:
-        return "ParentExpansion"
-
-    def _postprocess_nodes(self, nodes, query_bundle=None):
-        present = {n.node.metadata["message_id"] for n in nodes}
-        parents = []
-        for child in nodes:
-            parent_id = child.node.metadata.get("in_reply_to")
-            if not parent_id or parent_id in present:
-                continue
-            found = self.vector_store.get_nodes(None, filters=MetadataFilters(
-                filters=[MetadataFilter(key="message_id", value=parent_id)]))
-            if found:
-                # Note: לאב אין ציון משלו מעל הסף — מקבל את הציון של התגובה שהביאה אותו
-                parents.append(NodeWithScore(node=found[0], score=child.score))
-                present.add(parent_id)
-        return nodes + parents
-
-
 @dataclass
 class Answer:
     text: str
@@ -146,65 +81,24 @@ class Answer:
     search_query: Optional[str] = None
     timings: dict = field(default_factory=dict)
 
-    @property
-    def latest_date(self):
-        """Latest: תאריך ההודעה העדכנית ביותר שעליה התשובה מבוססת."""
-        return max(self.sources, key=lambda s: s["date_ts"])["date"] if self.sources else None
-
-    @property
-    def has_earlier(self):
-        """Earlier: התשובה נשענת גם על הודעות קודמות (עדכון, סתירה או שרשור)."""
-        return len(self.sources) > 1
-
 
 def attach_token_counter():
     """Tokens: מחבר TokenCountingHandler ל-LLM ול-Embeddings. קוראים אחרי setup_models()."""
     counter = TokenCountingHandler()
-    manager = CallbackManager([counter])
-    Settings.callback_manager = manager
-    Settings.llm.callback_manager = manager
-    Settings.embed_model.callback_manager = manager
+    # Why: גם Settings.callback_manager — כל גישה ל-Settings.llm מחליפה את המונה שלו במונה הכללי
+    Settings.callback_manager = CallbackManager([counter])
+    Settings.llm.callback_manager = Settings.embed_model.callback_manager = Settings.callback_manager
     return counter
 
 
-def build_engine(streaming=False, top_k=TOP_K, cutoff=SIMILARITY_CUTOFF, now=None, index=None,
-                 penalty=NO_INFO_PENALTY):
-    """Engine: Query Engine עם שליפה רחבה, סף, הודעות אב, מיון כרונולוגי ופרומפט בעברית.
-
-    Note: now — "היום" קבוע להערכה; אז נשלפות רק הודעות שנכתבו עד אז (MetadataFilters על date_ts).
-    Note: index — בממשק מגיע מ-st.cache_resource (נפתח פעם אחת, יומן הבעיות #16).
-    """
-    index = index or open_index()[0]
-    filters = None
-    if now is None:
-        now = datetime.now(ZoneInfo(TIMEZONE))
-    else:
-        filters = MetadataFilters(
-            filters=[MetadataFilter(key="date_ts", value=int(now.timestamp()), operator=FilterOperator.LTE)])
-    return index.as_query_engine(
-        similarity_top_k=top_k,
-        filters=filters,
-        node_postprocessors=[
-            NoInfoPenalty(factor=penalty),
-            SimilarityPostprocessor(similarity_cutoff=cutoff),
-            ParentExpansion(vector_store=index.vector_store),
-            ChronologicalNumbering(),
-        ],
-        text_qa_template=QA_PROMPT.partial_format(today=readable_date(now.isoformat())),
-        streaming=streaming,
-    )
-
-
-def rewrite_question(question, history=None, now=None):
-    """Rewrite: שאלה עצמאית לחיפוש. history = [(שאלה, תשובה), ...] — רק האחרונה נשלחת. בכשל — השאלה המקורית."""
-    now = now or datetime.now(ZoneInfo(TIMEZONE))
+def rewrite_question(question, history, today):
+    """Rewrite: שאלה עצמאית לחיפוש. history = [(שאלה, תשובה)] — רק האחרונה נשלחת. בכשל — השאלה המקורית."""
     previous = ""
     if history:
-        last_question, last_answer = history[-1]
-        previous = f"השאלה הקודמת: {last_question}\nהתשובה הקודמת: {last_answer[:HISTORY_ANSWER_CHARS]}\n"
-    prompt = REWRITE_PROMPT.format(today=readable_date(now.isoformat()), previous=previous, question=question)
+        previous = f"השאלה הקודמת: {history[-1][0]}\nהתשובה הקודמת: {history[-1][1][:300]}\n"
     try:
-        lines = Settings.llm.complete(prompt).text.strip().splitlines()
+        lines = Settings.llm.complete(REWRITE_PROMPT.format(today=today, previous=previous, question=question))
+        lines = lines.text.strip().splitlines()
     except Exception as error:
         # Why: לא בשקט — בהערכה זה היה מערבב "עם" ו"בלי" ניסוח בלי שנדע
         print(f"Warning: הניסוח מחדש נכשל ({type(error).__name__}) — מחפשים עם השאלה המקורית")
@@ -212,92 +106,104 @@ def rewrite_question(question, history=None, now=None):
     return (lines[0].strip().strip('"״') if lines else "") or question
 
 
-def prepare(question, counter, history, rewrite, streaming, engine_options):
-    """Prepare: ניסוח מחדש → Embedding → חיפוש. משותף ל-ask ול-ask_stream. מודד זמן לכל שלב.
+def parent_nodes(vector_store, nodes):
+    """Parent: לכל תגובה — ההודעה שעליה ענו, גם מתחת לסף. אב ישיר אחד, בלי כפילויות (#12, Parent-child)."""
+    present = {n.node.metadata["message_id"] for n in nodes}
+    parents = []
+    for child in nodes:
+        parent_id = child.node.metadata.get("in_reply_to")
+        if parent_id and parent_id not in present:
+            found = vector_store.get_nodes(None, filters=MetadataFilters(
+                filters=[MetadataFilter(key="message_id", value=parent_id)]))
+            if found:
+                # Note: לאב אין ציון משלו מעל הסף — מקבל את הציון של התגובה שהביאה אותו
+                parents.append(NodeWithScore(node=found[0], score=child.score))
+                present.add(parent_id)
+    return parents
+
+
+def retrieve(index, bundle, top_k, cutoff, penalty, now):
+    """Retrieve: חיפוש → הורדת ציון להודעות בלי מידע → סף → הודעות אב → מיון מהישנה לחדשה ומספור."""
+    # Note: now (בהערכה) — רק הודעות שנכתבו עד "היום" הקבוע, כדי שהודעות חדשות לא ישנו תוצאות
+    filters = MetadataFilters(filters=[MetadataFilter(key="date_ts", value=int(now.timestamp()),
+                                                      operator=FilterOperator.LTE)]) if now else None
+    nodes = index.as_retriever(similarity_top_k=top_k, filters=filters).retrieve(bundle)
+    for node in nodes:
+        if node.node.metadata.get("has_info") is False:
+            node.score *= penalty  # Why: שאלות ותודות "גונבות" מקום מהודעות עם מידע (#8)
+    nodes = SimilarityPostprocessor(similarity_cutoff=cutoff).postprocess_nodes(nodes)  # (#5)
+    nodes += parent_nodes(index.vector_store, nodes)
+    # Why: מהישנה לחדשה — ה-LLM רואה איך המידע השתנה (עדכון אחרי המקור, #6)
+    nodes.sort(key=lambda n: n.node.metadata["date_ts"])
+    for number, node in enumerate(nodes, 1):
+        node.node.text_template = MESSAGE_TEMPLATE.replace("{number}", str(number))
+    return nodes
+
+
+def prepare(question, counter, history=None, rewrite=True, top_k=TOP_K, cutoff=SIMILARITY_CUTOFF,
+            penalty=NO_INFO_PENALTY, now=None, index=None):
+    """Prepare: ניסוח מחדש → Embedding → חיפוש, עם זמן לכל שלב. משותף ל-ask ול-ask_stream.
 
     Why: החיפוש מקבל את הניסוח; ה-LLM שעונה — את השאלה המקורית וגם את הניסוח (החוברת, פרק 6).
     """
     counter.reset_counts()
-    timings = {}
-    start = time.perf_counter()
-    search_query = rewrite_question(question, history, engine_options.get("now")) if rewrite else question
+    today = readable_date((now or datetime.now(ZoneInfo(TIMEZONE))).isoformat())
+    timings, start = {}, time.perf_counter()
+    search_query = rewrite_question(question, history, today) if rewrite else question
     timings["rewrite"] = time.perf_counter() - start
 
     query_str = f"שאלה: {question}"
     if search_query != question:
         query_str += f"\nהכוונה בהקשר השיחה: {search_query}"
     start = time.perf_counter()
-    # Note: ה-Embedding מחושב כאן בנפרד, כדי למדוד אותו לבד; ה-retriever משתמש בו ולא מחשב שוב
     bundle = QueryBundle(query_str=query_str, embedding=Settings.embed_model.get_query_embedding(search_query))
     timings["embedding"] = time.perf_counter() - start
 
     start = time.perf_counter()
-    engine = build_engine(streaming=streaming, **engine_options)
-    nodes = engine.retrieve(bundle)
+    nodes = retrieve(index or open_index()[0], bundle, top_k, cutoff, penalty, now)
     timings["search"] = time.perf_counter() - start
-    return engine, bundle, nodes, search_query, timings
+    return bundle, nodes, search_query, timings, today
 
 
-def split_sources(text, node_count):
-    """Split: מפריד את שורת "מקורות:" מהתשובה. מחזיר (תשובה, מספרים) — או None אם צריך גיבוי."""
-    match = SOURCES_LINE.search(text)
-    if not match:
-        return text.strip(), None
-    answer = text[:match.start()].strip()
-    numbers = sorted({int(n) for n in re.findall(r"\d+", match.group(1))})
-    if not numbers:
-        return answer, [] if "אין" in match.group(1) else None
-    if any(n < 1 or n > node_count for n in numbers):
-        return answer, None
-    return answer, numbers
-
-
-def source_info(number, node_with_score):
-    """Source: מה מציגים על כל מקור — תאריך, שולחת, נושא וקטע קצר."""
-    meta = node_with_score.node.metadata
-    snippet = " ".join(node_with_score.node.get_content().split())
-    return {
-        "number": number,
-        "message_id": meta["message_id"],
-        "date": meta["date"],
-        "date_ts": meta["date_ts"],
-        "from": meta["from"],
-        "subject": meta["subject"],
-        "snippet": snippet[:SNIPPET_CHARS] + ("..." if len(snippet) > SNIPPET_CHARS else ""),
-        "score": round(node_with_score.score, 3),
-    }
+def synthesize(bundle, nodes, today, streaming):
+    """Synthesize: שולח ל-LLM את הפרומפט — כללים + ההודעות שנשלפו + השאלה (ה-"Augmented" ב-RAG)."""
+    template = QA_PROMPT.partial_format(today=today)
+    return get_response_synthesizer(text_qa_template=template, streaming=streaming).synthesize(bundle, nodes)
 
 
 def build_answer(raw_text, nodes, counter, search_query, timings):
-    """Answer: תשובה + מקורות. גיבוי: אם אין ציון מקורות תקין — כל ההודעות שנשלחו."""
-    text, numbers = split_sources(raw_text, len(nodes))
-    fallback = numbers is None
-    if fallback:
-        numbers = range(1, len(nodes) + 1)
-    sources = [source_info(n, nodes[n - 1]) for n in numbers]
+    """Answer: מפריד את שורת "מקורות:". גיבוי — אם אין ציון מקורות תקין, כל ההודעות שנשלחו."""
+    match = SOURCES_LINE.search(raw_text)
+    text = raw_text[:match.start()].strip() if match else raw_text.strip()
+    numbers = sorted({int(n) for n in re.findall(r"\d+", match.group(1))}) if match else []
+    fallback = False
+    if not numbers and match and "אין" in match.group(1):
+        pass  # Note: "מקורות: אין" — ה-LLM לא השתמש באף הודעה
+    elif not numbers or not all(1 <= n <= len(nodes) for n in numbers):
+        fallback, numbers = True, range(1, len(nodes) + 1)
+    sources = []
+    for n in numbers:
+        meta = nodes[n - 1].node.metadata
+        snippet = " ".join(nodes[n - 1].node.get_content().split())
+        sources.append({"message_id": meta["message_id"], "date": meta["date"], "date_ts": meta["date_ts"],
+                        "from": meta["from"], "subject": meta["subject"], "snippet": snippet[:120]})
     prompt = counter.llm_token_counts[-1].prompt if counter.llm_token_counts else None
     return Answer(text, sources, True, fallback, token_summary(counter), prompt, search_query, timings)
 
 
 def token_summary(counter):
-    return {
-        "llm_prompt": counter.prompt_llm_token_count,
-        "llm_completion": counter.completion_llm_token_count,
-        "embedding": counter.total_embedding_token_count,
-    }
+    return {"llm_prompt": counter.prompt_llm_token_count, "llm_completion": counter.completion_llm_token_count,
+            "embedding": counter.total_embedding_token_count}
 
 
-def ask(question, counter, history=None, rewrite=True, **engine_options):
-    """Ask: שאלה → תשובה עם מקורות. בלי הודעות מעל הסף — "לא מצאתי" בלי לקרוא ל-LLM שעונה.
-
-    Note: engine_options (top_k, cutoff, now) — להערכה. מחזיר גם את ה-nodes שנשלחו ל-LLM.
-    """
-    engine, bundle, nodes, search_query, timings = prepare(question, counter, history, rewrite, False, engine_options)
+def ask(question, counter, **options):
+    """Ask: שאלה → תשובה עם מקורות. בלי הודעות מעל הסף — "לא מצאתי" בלי לקרוא ל-LLM שעונה."""
+    bundle, nodes, search_query, timings, today = prepare(question, counter, **options)
     timings["llm"] = 0.0
     if not nodes:
         return Answer(NO_INFO_ANSWER, tokens=token_summary(counter), search_query=search_query, timings=timings), nodes
     start = time.perf_counter()
-    response = engine.synthesize(bundle, nodes)
+    response = synthesize(bundle, nodes, today, streaming=False)
     timings["llm"] = time.perf_counter() - start
     return build_answer(str(response), nodes, counter, search_query, timings), nodes
 
@@ -335,37 +241,26 @@ class SourcesHidingStream:
             yield self.full_text[sent:end]
 
 
-def ask_stream(question, counter, history=None, index=None):
-    """Stream: כמו ask, אבל מחזיר (זרם, nodes, ניסוח לחיפוש). זרם None = אין הודעות מעל הסף."""
-    engine, bundle, nodes, search_query, _ = prepare(question, counter, history, True, True, {"index": index})
+def ask_stream(question, counter, history, index):
+    """Stream: כמו ask, אבל מחזיר (זרם, nodes, ניסוח). זרם None = אין הודעות מעל הסף."""
+    bundle, nodes, search_query, _, today = prepare(question, counter, history=history, index=index)
     if not nodes:
         return None, nodes, search_query
-    return SourcesHidingStream(engine.synthesize(bundle, nodes).response_gen), nodes, search_query
-
-
-def finish_stream(stream, nodes, counter, search_query=None):
-    """Finish: אחרי שהזרם הסתיים — בונה Answer מלא עם מקורות וטוקנים."""
-    return build_answer(stream.full_text, nodes, counter, search_query, {})
+    return SourcesHidingStream(synthesize(bundle, nodes, today, streaming=True).response_gen), nodes, search_query
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Query: שאלה → תשובה מה-LLM עם מקורות")
-    parser.add_argument("questions", nargs="+", help="Questions: שאלה אחת או יותר")
-    parser.add_argument("--show-prompt", action="store_true", help="Prompt: הדפסת הפרומפט המלא שנשלח ל-LLM")
+    parser = argparse.ArgumentParser(description="Query: שאלה → תשובה עם מקורות")
+    parser.add_argument("question")
+    parser.add_argument("--show-prompt", action="store_true", help="Prompt: הפרומפט המלא שנשלח ל-LLM")
     args = parser.parse_args()
-    # Why: תוכן הודעות יכול לכלול אימוג'י (יומן הבעיות #4)
-    sys.stdout.reconfigure(errors="replace")
-
+    sys.stdout.reconfigure(errors="replace")  # Why: אימוג'י בהודעות לא קיים בקידוד cp1255 (#4)
     setup_models()
-    counter = attach_token_counter()
-    for question in args.questions:
-        answer, _ = ask(question, counter)
-        if args.show_prompt and answer.prompt:
-            print(f"===== Prompt sent to LLM =====\n{answer.prompt}\n==============================")
-        print(f"Question: {question}\nSearch query: {answer.search_query}\nAnswer: {answer.text}")
-        for s in answer.sources:
-            print(f"  [{s['number']}] {s['date']} | {s['from']} | {s['subject']} | score {s['score']}")
-        print(f"Tokens: {answer.tokens} | Seconds: { {k: round(v, 2) for k, v in answer.timings.items()} }\n")
+    answer, _ = ask(args.question, attach_token_counter())
+    if args.show_prompt:
+        print(answer.prompt)
+    print(f"Search: {answer.search_query}\nAnswer: {answer.text}\nSources: {[s['date'] for s in answer.sources]}")
+    print(f"Tokens: {answer.tokens}\nSeconds: { {k: round(v, 2) for k, v in answer.timings.items()} }")
 
 
 if __name__ == "__main__":

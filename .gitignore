@@ -4,7 +4,7 @@
 # Personal data: המיילים האמיתיים והאינדקס
 # Note: מיילי הדוגמה (מומצאים) כן עולים, כדי שאפשר יהיה להריץ את המערכת בלי מידע אישי
 data/*
-!data/sample_emails/
+!data/sample_messages/
 chroma_db/
 
 # Python
