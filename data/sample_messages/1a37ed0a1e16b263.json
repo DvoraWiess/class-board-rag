@@ -1,0 +1,8 @@
+{
+  "message_id": "<sample-27@sample.test>",
+  "date": "2026-11-03T13:00:00+02:00",
+  "subject": "הפרויקט בחשבון",
+  "from": "תמר כהן <tamar.cohen@example.com>",
+  "in_reply_to": null,
+  "body": "המורה לחשבון אמרה שהפרויקט נדחה ל-20.11."
+}

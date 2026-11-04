@@ -249,6 +249,18 @@
       "question": "איך מכינים פסטה?",
       "expected": "לא מצאתי מידע על כך בהודעות.",
       "relevant_ids": []
+    },
+    {
+      "id": 42, "type": "change", "split": "tune", "style": "natural",
+      "question": "מתי מגישים את הפרויקט בחשבון?",
+      "expected": "הפרויקט נדחה ל-20.11.",
+      "relevant_ids": ["<sample-27@sample.test>"]
+    },
+    {
+      "id": 43, "type": "change", "split": "test", "style": "natural",
+      "question": "מתי מגישים את הפרויקט במתמטיקה?",
+      "expected": "הפרויקט (בחשבון) נדחה ל-20.11.",
+      "relevant_ids": ["<sample-27@sample.test>"]
     }
   ]
 }

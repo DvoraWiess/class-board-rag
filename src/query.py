@@ -141,15 +141,17 @@ def retrieve(index, bundle, top_k, cutoff, penalty, now):
 
 
 def prepare(question, counter, history=None, rewrite=True, top_k=TOP_K, cutoff=SIMILARITY_CUTOFF,
-            penalty=NO_INFO_PENALTY, now=None, index=None):
+            penalty=NO_INFO_PENALTY, now=None, index=None, search_query=None):
     """Prepare: ניסוח מחדש → Embedding → חיפוש, עם זמן לכל שלב. משותף ל-ask ול-ask_stream.
 
     Why: החיפוש מקבל את הניסוח; ה-LLM שעונה — את השאלה המקורית וגם את הניסוח (החוברת, פרק 6).
+    Note: search_query — ניסוח קבוע מראש (בניסויים), כדי שההבדל בין ריצות יבוא רק מההגדרה הנבדקת.
     """
     counter.reset_counts()
     today = readable_date((now or datetime.now(ZoneInfo(TIMEZONE))).isoformat())
     timings, start = {}, time.perf_counter()
-    search_query = rewrite_question(question, history, today) if rewrite else question
+    if search_query is None:
+        search_query = rewrite_question(question, history, today) if rewrite else question
     timings["rewrite"] = time.perf_counter() - start
 
     query_str = f"שאלה: {question}"

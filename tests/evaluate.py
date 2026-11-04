@@ -146,6 +146,9 @@ def main():
     parser.add_argument("--llm", help="LLM: מודל אחר לכתיבת התשובות (ניסוי lite מול flash)")
     parser.add_argument("--no-rewrite", action="store_true", help="No rewrite: בלי ניסוח מחדש (להשוואה)")
     parser.add_argument("--no-judge", action="store_true", help="No judge: רק מדדי אחזור וזמנים, בלי שופט")
+    # Why: ה-LLM לא דטרמיניסטי גם בטמפרטורה 0 — ניסוח שונה בין ריצות יוצר רעש ב-MRR. קובץ קיים → משתמשים
+    # Why: בניסוחים שבו; קובץ חסר → מנסחים פעם אחת ושומרים. כך ההבדל בין ריצות נובע רק מההגדרה הנבדקת.
+    parser.add_argument("--rewrites", help="Rewrites: קובץ JSON של ניסוחים קבועים {id: ניסוח}")
     parser.add_argument("--tag", default="", help="Tag: שם קצר לניסוי, נכנס לשם הקובץ")
     # Note: ל-lite יש 15 בקשות לדקה, וכל שאלה = 2 קריאות (ניסוח + תשובה) — לכן 9 שניות בין שאלות
     parser.add_argument("--pause", type=float, default=9.0, help="Pause: שניות בין שאלות (מגבלת בקשות)")
@@ -166,6 +169,11 @@ def main():
                 "llm": Settings.llm.model,
                 "judge": judge_model.model if judge_model else None, "rewrite": not args.no_rewrite,
                 "asked_on": eval_set["asked_on"], "tag": args.tag}
+    rewrites_path = PROJECT_ROOT / args.rewrites if args.rewrites else None
+    fixed = {}
+    if rewrites_path and rewrites_path.exists():
+        fixed = {int(k): v for k, v in json.loads(rewrites_path.read_text(encoding="utf-8")).items()}
+    settings["rewrites"] = (f"fixed: {args.rewrites}" if fixed else f"saved to: {args.rewrites}") if args.rewrites else "live"
     print(f"Settings: {settings}")
 
     results = []
@@ -175,7 +183,8 @@ def main():
         for attempt in (1, 2):
             try:
                 answer, nodes = ask(item["question"], counter, history=history, rewrite=not args.no_rewrite,
-                                    top_k=args.top_k, cutoff=args.cutoff, penalty=args.penalty, now=now)
+                                    top_k=args.top_k, cutoff=args.cutoff, penalty=args.penalty, now=now,
+                                    search_query=fixed.get(item["id"]))
                 row = result_row(item, answer, nodes)
                 break
             except Exception as error:
@@ -195,6 +204,11 @@ def main():
         for r in results:
             r["correct"], r["reason"] = verdicts.get(r["id"], (None, "Answer error"))
             print(f"Q{r['id']:<3}{ {True: 'OK', False: 'WRONG', None: '?'}[r['correct']]:<6} {r['reason']}")
+
+    if rewrites_path and not fixed:
+        saved = {r["id"]: r["search_query"] for r in results if r["search_query"]}
+        rewrites_path.write_text(json.dumps(saved, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"Rewrites saved: {args.rewrites} ({len(saved)} questions)")
 
     summary = summarize(results)
     print(f"Summary: {summary}")
