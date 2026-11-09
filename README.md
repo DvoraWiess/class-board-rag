@@ -34,3 +34,5 @@ LlamaIndex · Gemini (`gemini-3.5-flash-lite`, `gemini-embedding-2`) · Chroma �
 
 כל הבעיות: [docs/problems_log.md](docs/problems_log.md) · תוצאות הבדיקות: [docs/decisions.md](docs/decisions.md)
 
+
+הפרויקט נעצר בשלב זה; הנקודות הפתוחות מתועדות ב-docs/problems_log.md

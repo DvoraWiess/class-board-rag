@@ -80,6 +80,8 @@ REWRITE_PROMPT = (
 
 # Note: "מקורות: ..." בשורה האחרונה של תשובת ה-LLM (לפעמים מודגש: "**מקורות:**")
 SOURCES_LINE = re.compile(r"\n?[ \t]*\**מקורות:\**\s*(.*?)\s*$")
+# Note: סוגריים שיש בהם תאריך מלא, כמו "(יום שלישי 10.11.2026)" — מה שהניסוח מחדש מוסיף ל"מחר"
+DATE_IN_PARENS = re.compile(r"\s*\([^()]*\d{1,2}\.\d{1,2}\.\d{4}[^()]*\)")
 
 
 @dataclass
@@ -141,6 +143,29 @@ def parent_nodes(vector_store, nodes):
     return parents
 
 
+def update_nodes(vector_store, nodes, now):
+    """Updates: לכל הודעה — ההודעות שמשנות אותה במפורש (updates, נקבע באינדוקס), גם מתחת לסף (#25).
+
+    Note: רק כדי שההודעה תגיע ל-LLM. הוא לא מקבל סימן שהיא "קובעת" — את זה הוא מחליט לפי כלל 2 בפרומפט.
+    """
+    present = {n.node.metadata["message_id"] for n in nodes}
+    added = []
+    for node in nodes:
+        conditions = [MetadataFilter(key="updates", value=node.node.metadata["message_id"])]
+        if now:  # Note: בהערכה — רק הודעות שנכתבו עד "היום" הקבוע, כמו בחיפוש עצמו
+            conditions.append(MetadataFilter(key="date_ts", value=int(now.timestamp()), operator=FilterOperator.LTE))
+        for found in vector_store.get_nodes(None, filters=MetadataFilters(filters=conditions)):
+            if found.metadata["message_id"] not in present:
+                added.append(NodeWithScore(node=found, score=node.score))
+                present.add(found.metadata["message_id"])
+    return added
+
+
+def without_dates(text):
+    """Search: בלי תאריך מלא בסוגריים — הוא מקרב הודעות עם מספרי תאריכים ומרחיק הודעות עם "מחר" (#23, #25)."""
+    return DATE_IN_PARENS.sub("", text)
+
+
 def retrieve(index, bundle, top_k, cutoff, penalty, now):
     """Retrieve: חיפוש → הורדת ציון להודעות בלי מידע → סף (על השאלה) → הודעות אב → מיון מהישנה לחדשה ומספור."""
     # Note: now (בהערכה) — רק הודעות שנכתבו עד "היום" הקבוע, כדי שהודעות חדשות לא ישנו תוצאות
@@ -160,6 +185,7 @@ def retrieve(index, bundle, top_k, cutoff, penalty, now):
     if not SimilarityPostprocessor(similarity_cutoff=cutoff).postprocess_nodes(nodes):
         return []
     nodes += parent_nodes(index.vector_store, nodes)
+    nodes += update_nodes(index.vector_store, nodes, now)
     # Why: מהישנה לחדשה — ה-LLM רואה איך המידע השתנה (עדכון אחרי המקור, #6)
     nodes.sort(key=lambda n: n.node.metadata["date_ts"])
     for number, node in enumerate(nodes, 1):
@@ -185,7 +211,9 @@ def prepare(question, counter, history=None, rewrite=True, top_k=TOP_K, cutoff=S
     if search_query != question:
         query_str += f"\nהכוונה בהקשר השיחה: {search_query}"
     start = time.perf_counter()
-    bundle = QueryBundle(query_str=query_str, embedding=Settings.embed_model.get_query_embedding(search_query))
+    # Why: החיפוש — בלי התאריך בסוגריים; ה-LLM שעונה מקבל את הניסוח המלא, עם התאריך ("הכוונה בהקשר השיחה")
+    bundle = QueryBundle(query_str=query_str,
+                         embedding=Settings.embed_model.get_query_embedding(without_dates(search_query)))
     timings["embedding"] = time.perf_counter() - start
 
     start = time.perf_counter()

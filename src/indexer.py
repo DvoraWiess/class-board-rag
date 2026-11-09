@@ -1,5 +1,6 @@
 import argparse
 import json
+import re
 from datetime import datetime
 from email.utils import parseaddr
 from zoneinfo import ZoneInfo
@@ -7,11 +8,12 @@ from zoneinfo import ZoneInfo
 import chromadb
 from llama_index.core import Document, Settings, VectorStoreIndex
 from llama_index.core.node_parser import SentenceSplitter
+from llama_index.core.vector_stores import FilterOperator, MetadataFilter, MetadataFilters
 from llama_index.vector_stores.chroma import ChromaVectorStore
 
 from src.clean import clean_body
-from src.config import (CHROMA_DIR, CHUNK_OVERLAP, CHUNK_SIZE, MESSAGES_DIR, PARENT_EXCERPT_CHARS, TEXT_VERSION,
-                        TIMEZONE, setup_models)
+from src.config import (CHROMA_DIR, CHUNK_OVERLAP, CHUNK_SIZE, MESSAGES_DIR, MODEL_PROVIDER, PARENT_EXCERPT_CHARS,
+                        TEXT_VERSION, TIMEZONE, setup_models)
 from src.messages import seed_samples
 
 INDEX_INFO_PATH = CHROMA_DIR / "index_info.json"
@@ -20,7 +22,12 @@ WEEKDAYS = ["שני", "שלישי", "רביעי", "חמישי", "שישי", "ש�
 
 # Why: מזהים ומספרים — רעש. date ו-from — רק ל-LLM (מתי ומי), בחיפוש הם היו מקרבים לפי תאריך/שם.
 # Why: reply_context (ציטוט מההודעה המקורית) — רק לחיפוש; reply_to (מי ומתי) — רק ל-LLM (#12)
-NEVER_KEYS = ["message_id", "date_ts", "in_reply_to", "subject", "has_info"]
+# Why: updates — רק לאחזור (לצרף את ההודעה המעדכנת), לא ל-LLM: הוא לא אמור לקבל סימן "זו קובעת" (#25)
+NEVER_KEYS = ["message_id", "date_ts", "in_reply_to", "subject", "has_info", "updates"]
+# Updates: כמה הודעות קודמות דומות נבדקות לכל הודעה חדשה
+UPDATE_CANDIDATES = 3
+# Rule: עדכון = שינוי מפורש (נדחה, בוטל, במקום, שינוי, הוקדם, הוזז) — סתירה או תוספת פרטים אינן עדכון (#25)
+CHANGE_WORDS = re.compile(r"נדח|בוטל|מבוטל|ביטול|במקום|שינוי|השתנ|הוקד|הוזז")
 EXCLUDED_EMBED_KEYS = NEVER_KEYS + ["date", "from", "reply_to"]
 EXCLUDED_LLM_KEYS = NEVER_KEYS + ["reply_context"]
 
@@ -32,6 +39,23 @@ INFO_PROMPT = """לפניך הודעות מקבוצה של תלמידות. לכ�
 {items}
 
 ענה ב-JSON בלבד: [{{"id": 1, "has_info": true}}, ...] — איבר אחד לכל הודעה."""
+
+# Why: עדכון שאינו תגובה לא נשלף בשאלה כללית ("מה יש מחר?" — הביטול לא מזכיר "מחר", #25)
+UPDATE_PROMPT = """לפניך הודעה חדשה מקבוצה של תלמידות, והודעות קודמות שדומות לה.
+עדכון = ההודעה החדשה אומרת במפורש שמשהו שנקבע **השתנה**: נדחה, בוטל, הוקדם, הוזז, "במקום", "שינוי".
+אלה **אינם** עדכון:
+- סתירה: תלמידה שאומרת משהו אחר ("אמרו לי שזה ב-8:00", "לא, זה ביום שני") בלי לומר שמשהו השתנה.
+- תוספת פרטים (שעה, מחיר, מה להביא), תגובה, שאלה, תודה, ברכה, הסכמה, או חזרה על אותו מידע.
+- הודעה על נושא אחר או על יום אחר.
+
+<new>
+{new}
+</new>
+
+{previous}
+
+ענה ב-JSON בלבד: {{"change_phrase": "המילים המדויקות מההודעה החדשה שאומרות שמשהו השתנה, או null",
+"updates": מספר ההודעה הקודמת שהשתנתה, או null}}"""
 
 
 def readable_date(iso_date):
@@ -61,19 +85,59 @@ def classify_info(records):
     return [labels.get(i, True) for i in range(1, len(records) + 1)]
 
 
-def build_document(record, parent, has_info=True):
+def find_update(index, record):
+    """Update: איזו הודעה קודמת ההודעה הזו משנה במפורש (נדחה / בוטל / במקום) — message_id, או "".
+
+    Note: המועמדות — UPDATE_CANDIDATES ההודעות הקודמות הכי דומות באינדקס. לכן מוסיפים לאינדקס לפי סדר התאריכים.
+    """
+    if not index.vector_store.client.count():
+        return ""
+    earlier = MetadataFilters(filters=[MetadataFilter(key="date_ts", value=timestamp(record), operator=FilterOperator.LT)])
+    candidates = index.as_retriever(similarity_top_k=UPDATE_CANDIDATES, filters=earlier).retrieve(message_text(record))
+    if not candidates:
+        return ""
+    previous = "\n".join(f'<previous number="{i}">\n{c.node.metadata["date"]}\n{c.node.get_content()}\n</previous>'
+                         for i, c in enumerate(candidates, 1))
+    try:
+        raw = Settings.llm.complete(UPDATE_PROMPT.format(new=message_text(record), previous=previous)).text
+        answer = json.loads(raw[raw.find("{"):raw.rfind("}") + 1])
+    except Exception as error:
+        print(f"Warning: בדיקת עדכון נכשלה ({type(error).__name__}) — ההודעה נשמרת בלי קישור")
+        return ""
+    # Why: ה-LLM לבדו קישר גם שאלות, תוספות פרטים, חזרות וסתירות (11 מ-14 שגויים, #25). לכן הקוד מוודא:
+    # Rule: 1. הציטוט מההודעה עצמה — בלי נושא "Re:", שמועתק מההודעה המקורית ("Re: המבחן באנגלית נדחה!")
+    # Rule: 2. יש בו מילת שינוי. 3. מה שאחרי מילת השינוי ("נדחה ל-20.11") לא כתוב כבר בהודעה הקודמת — אחרת זו חזרה
+    phrase, number = answer.get("change_phrase") or "", answer.get("updates")
+    own_text = clean_body(record["body"]) if record["subject"].lower().startswith("re:") else message_text(record)
+    change = CHANGE_WORDS.search(phrase)
+    if number not in range(1, len(candidates) + 1) or not change or phrase not in own_text:
+        return ""
+    if phrase[change.start():] in candidates[number - 1].node.get_content():
+        return ""
+    return candidates[number - 1].node.metadata["message_id"]
+
+
+def timestamp(record):
+    return int(datetime.fromisoformat(record["date"]).timestamp())
+
+
+def message_text(record):
+    """Text: הטקסט שנכנס לאינדקס — נושא + גוף נקי."""
+    return f"{record['subject']}\n{clean_body(record['body'])}"
+
+
+def build_document(record, parent, has_info=True, updates=""):
     """Document: הודעה אחת = Document אחד. הטקסט = נושא + גוף נקי."""
     metadata = {"message_id": record["message_id"], "subject": record["subject"], "from": sender_name(record),
-                "date": readable_date(record["date"]),
-                "date_ts": int(datetime.fromisoformat(record["date"]).timestamp()),
+                "date": readable_date(record["date"]), "date_ts": timestamp(record),
                 # Note: Chroma לא מקבל None — לכן מחרוזת ריקה
-                "in_reply_to": record.get("in_reply_to") or "", "has_info": has_info}
+                "in_reply_to": record.get("in_reply_to") or "", "has_info": has_info, "updates": updates}
     if parent:
         excerpt = " ".join(clean_body(parent["body"]).split())
         excerpt = excerpt[:PARENT_EXCERPT_CHARS] + "..." if len(excerpt) > PARENT_EXCERPT_CHARS else excerpt
         metadata["reply_context"] = f'בתגובה ל{sender_name(parent)}: "{excerpt}"'
         metadata["reply_to"] = f"בתגובה להודעה של {sender_name(parent)} מ{readable_date(parent['date'])}"
-    return Document(id_=record["message_id"], text=f"{record['subject']}\n{clean_body(record['body'])}",
+    return Document(id_=record["message_id"], text=message_text(record),
                     metadata=metadata, excluded_embed_metadata_keys=EXCLUDED_EMBED_KEYS,
                     excluded_llm_metadata_keys=EXCLUDED_LLM_KEYS)
 
@@ -86,7 +150,7 @@ def load_records():
 
 def current_settings():
     """Settings: מה שחייב להיות זהה בין האינדקס השמור לקוד — אחרת צריך בנייה מחדש."""
-    return {"embed_model": Settings.embed_model.model_name, "chunk_size": CHUNK_SIZE,
+    return {"embed_provider": MODEL_PROVIDER, "embed_model": Settings.embed_model.model_name, "chunk_size": CHUNK_SIZE,
             "chunk_overlap": CHUNK_OVERLAP, "text_version": TEXT_VERSION}
 
 
@@ -123,7 +187,7 @@ def save_index_info(collection):
 
 
 def open_collection():
-    """Open: אוסף ב-Chroma. cosine — המדד המקובל לטקסט; את הווקטורים מחשב Gemini, לא Chroma."""
+    """Open: אוסף ב-Chroma. cosine — המדד המקובל לטקסט; את הווקטורים מחשב ספק ה-Embeddings, לא Chroma."""
     client = chromadb.PersistentClient(path=str(CHROMA_DIR))
     collection = client.get_or_create_collection(
         "messages", configuration={"hnsw": {"space": "cosine"}}, embedding_function=None)
@@ -144,12 +208,15 @@ def index_new_messages():
     already = {m["message_id"] for m in collection.get(include=["metadatas"])["metadatas"]}
     new_records = sorted((r for r in records.values() if r["message_id"] not in already), key=lambda r: r["date"])
     splitter = SentenceSplitter(chunk_size=CHUNK_SIZE, chunk_overlap=CHUNK_OVERLAP)
-    # Why: מנות לפי הודעות — כדי שהודעה לא תיכנס רק חלקית; מנה = קריאת סימון אחת (מגבלת בקשות)
+    # Why: מנות לפי הודעות — מנה = קריאת סימון has_info אחת (מגבלת בקשות)
     for start in range(0, len(new_records), BATCH_SIZE):
         batch = new_records[start:start + BATCH_SIZE]
-        documents = [build_document(r, records.get(r.get("in_reply_to")), info)
-                     for r, info in zip(batch, classify_info(batch))]
-        index.insert_nodes(splitter.get_nodes_from_documents(documents))
+        for record, info in zip(batch, classify_info(batch)):
+            # Why: הוספה אחת-אחת, מהישנה לחדשה — כדי ש-find_update יראה את כל ההודעות הקודמות, גם מאותה מנה
+            # Note: הודעה בלי מידע (שאלה, תודה) לא יכולה לעדכן — לא בודקים בכלל
+            updates = find_update(index, record) if info else ""
+            document = build_document(record, records.get(record.get("in_reply_to")), info, updates)
+            index.insert_nodes(splitter.get_nodes_from_documents([document]))
         print(f"Progress: אונדקסו {start + len(batch)} מתוך {len(new_records)} הודעות חדשות")
     if new_records:
         save_index_info(collection)

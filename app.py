@@ -9,7 +9,7 @@ from src.indexer import index_built_at, index_new_messages, load_records, open_i
 from src.messages import new_post, save_message, seed_samples
 from src.query import NO_INFO_ANSWER, Answer, ask_stream, attach_token_counter, build_answer, token_summary
 
-ANSWER_ERROR = "אירעה שגיאה בזמן החיפוש או כתיבת התשובה (ייתכן עומס זמני ב-Gemini). נסי שוב בעוד רגע."
+ANSWER_ERROR = "אירעה שגיאה בזמן החיפוש או כתיבת התשובה (ייתכן עומס זמני אצל ספק המודלים). נסי שוב בעוד רגע."
 RTL_CSS = """<style>
 [data-testid="stAppViewContainer"] { direction: rtl; }
 p, li, h1, label, input, textarea, [data-testid="stMarkdownContainer"] { text-align: right; }
@@ -52,7 +52,7 @@ def render_answer(answer, question):
                 st.markdown(f"**{s['date']}** · {s['from']} · {s['subject']}")
                 st.caption(s["snippet"])
     t = answer.tokens
-    llm = f"LLM {t['llm_prompt']} + {t['llm_completion']} (נתון מ-Gemini, כולל הניסוח)" if answer.llm_called \
+    llm = f"LLM {t['llm_prompt']} + {t['llm_completion']} (נתון מהספק, כולל הניסוח)" if answer.llm_called \
         else "לא נשלחה קריאה ל-LLM שעונה"
     st.caption(f"טוקנים: {llm} · Embedding {t['embedding']} (הערכה)")
 
@@ -136,7 +136,7 @@ except SystemExit as error:  # Note: מפתח חסר, או אינדקס שצרי
     st.stop()
 except Exception as error:
     print(f"Error: {type(error).__name__}: {error}")
-    st.error("שגיאה בהפעלת המערכת (חיבור ל-Gemini או לאינדקס). בדקי את החיבור ונסי לרענן.")
+    st.error("שגיאה בהפעלת המערכת (חיבור לספק המודלים או לאינדקס). בדקי את החיבור ונסי לרענן.")
     st.stop()
 check_index_fresh(state)
 st.session_state.setdefault("history", [])

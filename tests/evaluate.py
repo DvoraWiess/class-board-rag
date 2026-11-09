@@ -11,7 +11,7 @@ from datetime import datetime
 
 from llama_index.core import Settings
 
-from src.config import NO_INFO_PENALTY, PROJECT_ROOT, SIMILARITY_CUTOFF, TOP_K, judge_llm, setup_models
+from src.config import MODEL_PROVIDER, NO_INFO_PENALTY, PROJECT_ROOT, SIMILARITY_CUTOFF, TOP_K, judge_llm, setup_models
 from src.query import ask, attach_token_counter
 
 EVAL_SET_PATH = PROJECT_ROOT / "tests" / "eval_set.json"
@@ -115,7 +115,7 @@ def summarize(results):
         "recall_at_k": average(r["recall"] for r in results),
         "mrr": average(r["mrr"] for r in results),
         "llm_calls": sum(r["llm_called"] for r in results),
-        # Note: טוקני LLM — נתון אמיתי מ-Gemini; טוקני Embedding — הערכה (יומן הבעיות #9)
+        # Note: טוקני LLM — נתון אמיתי מהספק; טוקני Embedding — הערכה (יומן הבעיות #9)
         "avg_llm_tokens_real": average(r["tokens"]["llm_prompt"] + r["tokens"]["llm_completion"] for r in ok),
         "avg_embedding_tokens_estimate": average(r["tokens"]["embedding"] for r in ok),
         "avg_seconds": {stage: average(r["seconds"].get(stage) for r in ok) for stage in STAGES}
@@ -161,7 +161,7 @@ def main():
     now = datetime.fromisoformat(eval_set["asked_on"])
 
     if args.llm:
-        os.environ["GEMINI_LLM_MODEL"] = args.llm
+        os.environ["OPENAI_LLM_MODEL" if MODEL_PROVIDER == "openai" else "GEMINI_LLM_MODEL"] = args.llm
     setup_models()
     counter = attach_token_counter()
     judge_model = None if args.no_judge else judge_llm(Settings.llm.model)
